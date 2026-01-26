@@ -24,6 +24,21 @@
    Publishable can be used in the frontend and uses row-level security (RLS) 
    Secret Key can be used in the backend and bypasses RL
    ```
-   An example is in `.env.example`
+    An example is in `.env.example`
+
+
+## Running the API
+
+Start the FastAPI server:
+
+```bash
+uvicorn src.main:app --reload
+```
+
+The API will be available at http://localhost:8000
+Interactive API docs:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
 
 
