@@ -4,7 +4,7 @@ from typing import TypeVar
 from pydantic import BaseModel, TypeAdapter
 from supabase import create_client, Client
 
-from src.config import get_settings
+from .config import get_settings
 
 T = TypeVar("T", bound=BaseModel)
 
