@@ -1,6 +1,6 @@
-from src.models.product import Product, Stage, InputShare
-from src.models.claim import Claim, Evidence
-from src.models.user import QuestMission, UserProgress, UserRole
+from .product import Product, Stage, InputShare
+from .claim import Claim, Evidence
+from .user import QuestMission, UserProgress, UserRole
 
 __all__ = [
     "Product",
@@ -12,4 +12,3 @@ __all__ = [
     "UserProgress",
     "UserRole",
 ]
-
