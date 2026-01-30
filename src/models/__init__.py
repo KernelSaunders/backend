@@ -1,6 +1,7 @@
 from .product import Product, Stage, InputShare
 from .claim import Claim, Evidence
 from .user import QuestMission, UserProgress, UserRole
+from .issue import IssueReport, ChangeLog
 
 __all__ = [
     "Product",
@@ -11,4 +12,6 @@ __all__ = [
     "QuestMission",
     "UserProgress",
     "UserRole",
+    "IssueReport",
+    "ChangeLog",
 ]
