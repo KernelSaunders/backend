@@ -15,6 +15,11 @@
    pip install -r requirements.txt
    ```
 
+2. Install developer dependencies:
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
+
 3. Create a `.env` file with your Supabase credentials:
    
    <https://supabase.com/dashboard/project/hvaudmnxzqkllqmrbzab/settings/api-keys>
