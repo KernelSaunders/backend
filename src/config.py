@@ -1,4 +1,3 @@
-import os
 from functools import lru_cache
 
 from dotenv import load_dotenv
@@ -10,6 +9,7 @@ load_dotenv()
 class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_key: str = ""
+    port: int = 8000
 
     class Config:
         env_file = ".env"
