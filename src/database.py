@@ -38,3 +38,16 @@ def select_by_field(model: type[T], field: str, value: str) -> list[T]:
     table_name = model.__name__
     response = client.table(table_name).select("*").eq(field, value).execute()
     return TypeAdapter(list[model]).validate_python(response.data)
+
+
+def upsert_batch(table_name: str, records: list[dict], batch_size: int = 500) -> int:
+    """Bulk upsert records more efficient than singular upserts"""
+    if not records:
+        return 0
+    client = get_client()
+    total = 0
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i + batch_size]
+        client.table(table_name).upsert(batch).execute()
+        total += len(batch)
+    return total
