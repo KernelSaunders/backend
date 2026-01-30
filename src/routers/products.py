@@ -1,8 +1,19 @@
+from uuid import UUID
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ..models import Product, Stage, InputShare, Claim, Evidence
 from ..database import select_all, select_by_id, select_by_field
+
+
+def validate_uuid(value: str, field_name: str = "id") -> str:
+    """Validate that a string is a valid UUID format."""
+    try:
+        UUID(value)
+        return value
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid {field_name} format")
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -26,6 +37,7 @@ def get_products() -> list[Product]:
 
 @router.get("/{product_id}")
 def get_product(product_id: str) -> Product:
+    validate_uuid(product_id, "product_id")
     product = select_by_id(Product, "product_id", product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -34,6 +46,7 @@ def get_product(product_id: str) -> Product:
 
 @router.get("/{product_id}/traceability")
 def get_product_traceability(product_id: str) -> ProductTraceability:
+    validate_uuid(product_id, "product_id")
     product = select_by_id(Product, "product_id", product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
