@@ -1,4 +1,5 @@
 """Tests for Product model."""
+
 import pytest
 from datetime import datetime, date
 from decimal import Decimal
