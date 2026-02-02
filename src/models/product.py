@@ -37,4 +37,3 @@ class InputShare(BaseModel):
     percentage: Decimal | None = None
     notes: str | None = None
     created_at: datetime
-
