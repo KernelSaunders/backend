@@ -1,4 +1,5 @@
 """Tests for config module."""
+
 import pytest
 from unittest.mock import patch, MagicMock
 
