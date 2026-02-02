@@ -15,6 +15,7 @@ def validate_uuid(value: str, field_name: str = "id") -> str:
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid {field_name} format")
 
+
 router = APIRouter(prefix="/products", tags=["products"])
 
 
@@ -50,20 +51,20 @@ def get_product_traceability(product_id: str) -> ProductTraceability:
     product = select_by_id(Product, "product_id", product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    
+
     stages = select_by_field(Stage, "product_id", product_id)
     stages.sort(key=lambda s: s.sequence_order or 0)
-    
+
     input_shares = select_by_field(InputShare, "product_id", product_id)
-    
+
     claims = select_by_field(Claim, "product_id", product_id)
     claims_with_evidence = []
 
-    #Consider making this async
+    # Consider making this async
     for claim in claims:
         evidence = select_by_field(Evidence, "claim_id", claim.claim_id)
         claims_with_evidence.append(ClaimWithEvidence(claim=claim, evidence=evidence))
-    
+
     return ProductTraceability(
         product=product,
         stages=stages,
