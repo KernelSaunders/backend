@@ -19,7 +19,8 @@ def select_all(model: type[T]) -> list[T]:
     client = get_client()
     table_name = model.__name__
     response = client.table(table_name).select("*").execute()
-    return TypeAdapter(list[model]).validate_python(response.data)
+    adapter: TypeAdapter[list[T]] = TypeAdapter(list[model])  # type: ignore
+    return adapter.validate_python(response.data)
 
 
 def select_by_id(model: type[T], id_field: str, id_value: str) -> T | None:
@@ -37,7 +38,8 @@ def select_by_field(model: type[T], field: str, value: str) -> list[T]:
     client = get_client()
     table_name = model.__name__
     response = client.table(table_name).select("*").eq(field, value).execute()
-    return TypeAdapter(list[model]).validate_python(response.data)
+    adapter: TypeAdapter[list[T]] = TypeAdapter(list[model])  # type: ignore
+    return adapter.validate_python(response.data)
 
 
 def upsert_batch(table_name: str, records: list[dict], batch_size: int = 500) -> int:
@@ -47,7 +49,7 @@ def upsert_batch(table_name: str, records: list[dict], batch_size: int = 500) ->
     client = get_client()
     total = 0
     for i in range(0, len(records), batch_size):
-        batch = records[i:i + batch_size]
+        batch = records[i : i + batch_size]
         client.table(table_name).upsert(batch).execute()
         total += len(batch)
     return total
