@@ -10,6 +10,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    env:
+      CI: true
+      SUPABASE_URL: https://test.supabase.co
+      SUPABASE_KEY: test-key-for-ci
+    
     steps:
     - uses: actions/checkout@v4
     
@@ -33,3 +38,4 @@ jobs:
       with:
         file: ./coverage.xml
         fail_ci_if_error: false
+
