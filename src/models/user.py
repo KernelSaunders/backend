@@ -30,4 +30,3 @@ class UserRole(BaseModel):
     user_id: str | None = None
     role: Literal["consumer", "verifier", "maintainer"] | None = None
     created_at: datetime
-

@@ -18,9 +18,10 @@ class IssueReport(BaseModel):
 
 class ChangeLog(BaseModel):
     log_id: str
-    entity_type: Literal["product", "stage", "claim", "evidence", "input_share", "mission"]
+    entity_type: Literal[
+        "product", "stage", "claim", "evidence", "input_share", "mission"
+    ]
     entity_id: str
     changed_by: str | None = None
     change_summary: str
     timestamp: datetime
-

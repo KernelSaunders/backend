@@ -1,6 +1,7 @@
 # C:/backend/.venv/Scripts/python.exe -m pytest tests/routers/test_products.py::TestValidateUuid tests/routers/test_products.py::TestGetProduct --cov=src.routers.products --cov-report=term-missing
 
 """Tests for products router."""
+
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from fastapi import HTTPException
@@ -130,22 +131,24 @@ class TestGetProduct:
     def test_get_product_with_valid_id(self, mock_select_by_id):
         """Test that GET /products/{id} returns product with valid ID."""
         mock_select_by_id.return_value = self.mock_product
-        
+
         response = self.client.get(f"/products/{self.valid_product_id}")
-        
+
         assert response.status_code == 200
         assert response.json()["product_id"] == self.valid_product_id
         assert response.json()["name"] == "Test Product"
-        mock_select_by_id.assert_called_once_with(Product, "product_id", self.valid_product_id)
+        mock_select_by_id.assert_called_once_with(
+            Product, "product_id", self.valid_product_id
+        )
 
     @patch("src.routers.products.select_by_id")
     def test_get_product_search_by_id_returns_correct_product(self, mock_select_by_id):
         """Test that searching by product ID returns the correct product data."""
         mock_select_by_id.return_value = self.mock_product
-        
+
         response = self.client.get(f"/products/{self.valid_product_id}")
         data = response.json()
-        
+
         assert data["product_id"] == self.valid_product_id
         assert data["name"] == "Test Product"
         assert data["category"] == "food"
@@ -161,7 +164,7 @@ class TestGetProduct:
             "not-a-uuid-at-all",
             "550e8400-e29b-41d4-a716",  # Too short
         ]
-        
+
         for invalid_id in invalid_ids:
             response = self.client.get(f"/products/{invalid_id}")
             assert response.status_code == 400
@@ -172,20 +175,22 @@ class TestGetProduct:
         """Test that GET /products/{id} returns 404 when product not found."""
         mock_select_by_id.return_value = None
         non_existent_id = "123e4567-e89b-12d3-a456-426614174000"
-        
+
         response = self.client.get(f"/products/{non_existent_id}")
-        
+
         assert response.status_code == 404
         assert "Product not found" in response.json()["detail"]
-        mock_select_by_id.assert_called_once_with(Product, "product_id", non_existent_id)
+        mock_select_by_id.assert_called_once_with(
+            Product, "product_id", non_existent_id
+        )
 
     @patch("src.routers.products.select_by_id")
     def test_get_product_calls_select_by_id(self, mock_select_by_id):
         """Test that get_product calls select_by_id with correct parameters."""
         mock_select_by_id.return_value = self.mock_product
-        
+
         self.client.get(f"/products/{self.valid_product_id}")
-        
+
         mock_select_by_id.assert_called_once()
         call_args = mock_select_by_id.call_args
         assert call_args[0][0] == Product
@@ -196,9 +201,9 @@ class TestGetProduct:
     def test_get_product_validates_uuid_before_database_query(self, mock_select_by_id):
         """Test that UUID validation happens before database query."""
         invalid_id = "not-a-uuid"
-        
+
         response = self.client.get(f"/products/{invalid_id}")
-        
+
         assert response.status_code == 400
         # Database should not be called if UUID is invalid
         mock_select_by_id.assert_not_called()
@@ -211,7 +216,7 @@ class TestGetProduct:
             ("987f6543-e21b-12d3-a456-426614174999", "Product B"),
             ("aaaabbbb-cccc-dddd-eeee-ffffffffffff", "Product C"),
         ]
-        
+
         for product_id, product_name in test_cases:
             mock_product = Product(
                 product_id=product_id,
@@ -221,9 +226,9 @@ class TestGetProduct:
                 updated_at="2024-01-01T00:00:00",
             )
             mock_select_by_id.return_value = mock_product
-            
+
             response = self.client.get(f"/products/{product_id}")
-            
+
             assert response.status_code == 200
             assert response.json()["product_id"] == product_id
             assert response.json()["name"] == product_name
@@ -232,10 +237,10 @@ class TestGetProduct:
     def test_get_product_response_structure(self, mock_select_by_id):
         """Test that GET /products/{id} returns correctly structured response."""
         mock_select_by_id.return_value = self.mock_product
-        
+
         response = self.client.get(f"/products/{self.valid_product_id}")
         data = response.json()
-        
+
         assert response.status_code == 200
         # Verify all expected fields are present
         assert "product_id" in data
@@ -258,10 +263,10 @@ class TestGetProduct:
             updated_at="2024-01-01T00:00:00",
         )
         mock_select_by_id.return_value = minimal_product
-        
+
         response = self.client.get(f"/products/{self.valid_product_id}")
         data = response.json()
-        
+
         assert response.status_code == 200
         assert data["product_id"] == self.valid_product_id
         assert data["name"] == "Minimal Product"
@@ -273,9 +278,9 @@ class TestGetProduct:
     def test_get_product_search_performance_single_query(self, mock_select_by_id):
         """Test that product search makes only one database query."""
         mock_select_by_id.return_value = self.mock_product
-        
+
         self.client.get(f"/products/{self.valid_product_id}")
-        
+
         # Verify select_by_id is called exactly once
         assert mock_select_by_id.call_count == 1
 
@@ -283,7 +288,7 @@ class TestGetProduct:
     def test_get_product_handles_database_errors_gracefully(self, mock_select_by_id):
         """Test that database errors are handled appropriately."""
         mock_select_by_id.side_effect = Exception("Database connection error")
-        
+
         with pytest.raises(Exception):
             self.client.get(f"/products/{self.valid_product_id}")
 
@@ -293,12 +298,12 @@ class TestGetProduct:
         # UUIDs should be case-insensitive
         uuid_lowercase = "550e8400-e29b-41d4-a716-446655440000"
         uuid_uppercase = "550E8400-E29B-41D4-A716-446655440000"
-        
+
         mock_select_by_id.return_value = self.mock_product
-        
+
         response_lower = self.client.get(f"/products/{uuid_lowercase}")
         response_upper = self.client.get(f"/products/{uuid_uppercase}")
-        
+
         # Both should be valid UUIDs
         assert response_lower.status_code == 200
         assert response_upper.status_code == 200

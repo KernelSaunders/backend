@@ -1,4 +1,5 @@
 """Tests for database module."""
+
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from pydantic import BaseModel
