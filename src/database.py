@@ -49,7 +49,7 @@ def upsert_batch(table_name: str, records: list[dict], batch_size: int = 500) ->
     client = get_client()
     total = 0
     for i in range(0, len(records), batch_size):
-        batch = records[i : i + batch_size]
+        batch = records[i:i + batch_size]
         client.table(table_name).upsert(batch).execute()
         total += len(batch)
     return total
