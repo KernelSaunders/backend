@@ -1,9 +1,11 @@
+from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ..models import Product, Stage, InputShare, Claim, Evidence
+from ..models import Claim, Evidence, InputShare, Product, QuestMission, Stage
 from ..database import select_all, select_by_id, select_by_field
 
 
@@ -29,6 +31,17 @@ class ProductTraceability(BaseModel):
     stages: list[Stage]
     input_shares: list[InputShare]
     claims: list[ClaimWithEvidence]
+
+
+class QuestMissionPublic(BaseModel):
+    mission_id: str
+    product_id: str
+    tier: Literal["basic", "intermediate", "advanced"]
+    question: str
+    type: Literal["multiple_choice"] = "multiple_choice"
+    options: list[str]
+    explanation_link: str | None = None
+    created_at: datetime
 
 
 @router.get("")
@@ -71,3 +84,40 @@ def get_product_traceability(product_id: str) -> ProductTraceability:
         input_shares=input_shares,
         claims=claims_with_evidence,
     )
+
+
+@router.get("/{product_id}/missions", response_model=list[QuestMissionPublic])
+def get_product_missions(product_id: str) -> list[QuestMissionPublic]:
+    validate_uuid(product_id, "product_id")
+    product = select_by_id(Product, "product_id", product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    missions = select_by_field(QuestMission, "product_id", product_id)
+    public: list[QuestMissionPublic] = []
+    for m in missions:
+        answer_key = m.answer_key or {}
+        options = answer_key.get("options")
+
+        # Don't support manual answers for now
+        if m.grading_type != "auto":
+            continue
+
+        if not isinstance(options, list) or not all(isinstance(o, str) for o in options):
+            raise HTTPException(
+                status_code=500,
+                detail=f"QuestMission {m.mission_id} has invalid answer_key.options",
+            )
+
+        public.append(
+            QuestMissionPublic(
+                mission_id=m.mission_id,
+                product_id=m.product_id or product_id,
+                tier=m.tier,
+                question=m.question,
+                options=options,
+                explanation_link=m.explanation_link,
+                created_at=m.created_at,
+            )
+        )
+    return public
