@@ -14,7 +14,7 @@ from src.routers.products import (
     ClaimWithEvidence,
     ProductTraceability,
 )
-from src.models import Product, Stage, InputShare, Claim, Evidence
+from src.models import Product, Stage, InputShare, Claim, Evidence, QuestMission
 
 
 class TestValidateUuid:
@@ -385,6 +385,95 @@ class TestGetProductTraceability:
         """Test endpoint behavior when product has no input shares."""
         # TODO: Implement test
         pass
+
+
+class TestGetProductMissions:
+    """Test suite for GET /products/{product_id}/missions endpoint."""
+
+    def setup_method(self):
+        self.client = TestClient(app)
+        self.valid_product_id = "550e8400-e29b-41d4-a716-446655440000"
+        self.mock_product = Product(
+            product_id=self.valid_product_id,
+            name="Test Product",
+            category="food",
+            brand="Test Brand",
+            description=None,
+            image=None,
+            created_at="2024-01-01T00:00:00",
+            updated_at="2024-01-01T00:00:00",
+        )
+
+    @patch("src.routers.products.select_by_id")
+    @patch("src.routers.products.select_by_field")
+    def test_get_product_missions_returns_public_shape(
+        self, mock_select_by_field, mock_select_by_id
+    ):
+        mock_select_by_id.return_value = self.mock_product
+        mock_select_by_field.return_value = [
+            QuestMission(
+                mission_id="123e4567-e89b-12d3-a456-426614174000",
+                product_id=self.valid_product_id,
+                tier="basic",
+                question="Which is correct?",
+                answer_key={"correct": "0.8%", "options": ["0.5%", "0.8%", "1.0%", "2.0%"]},
+                grading_type="auto",
+                explanation_link="https://example.com/explain",
+                created_at="2024-01-02T00:00:00Z",
+            )
+        ]
+
+        response = self.client.get(f"/products/{self.valid_product_id}/missions")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 1
+        mission = data[0]
+
+        assert mission["mission_id"] == "123e4567-e89b-12d3-a456-426614174000"
+        assert mission["product_id"] == self.valid_product_id
+        assert mission["tier"] == "basic"
+        assert mission["question"] == "Which is correct?"
+        assert mission["type"] == "multiple_choice"
+        assert mission["options"] == ["0.5%", "0.8%", "1.0%", "2.0%"]
+        assert mission["explanation_link"] == "https://example.com/explain"
+
+        # Must not leak answer_key/correct answer or grading_type to clients
+        assert "answer_key" not in mission
+        assert "grading_type" not in mission
+        assert "correct" not in mission
+
+    @patch("src.routers.products.select_by_id")
+    def test_get_product_missions_product_not_found(self, mock_select_by_id):
+        mock_select_by_id.return_value = None
+        response = self.client.get(f"/products/{self.valid_product_id}/missions")
+        assert response.status_code == 404
+        assert "Product not found" in response.json()["detail"]
+
+    @patch("src.routers.products.select_by_id")
+    @patch("src.routers.products.select_by_field")
+    def test_get_product_missions_invalid_answer_key_shape_500(
+        self, mock_select_by_field, mock_select_by_id
+    ):
+        mock_select_by_id.return_value = self.mock_product
+        mock_select_by_field.return_value = [
+            QuestMission(
+                mission_id="123e4567-e89b-12d3-a456-426614174000",
+                product_id=self.valid_product_id,
+                tier="basic",
+                question="Which is correct?",
+                answer_key={"keywords": ["oxidation", "freshness"]},
+                grading_type="auto",
+                explanation_link=None,
+                created_at="2024-01-02T00:00:00Z",
+            )
+        ]
+
+        response = self.client.get(f"/products/{self.valid_product_id}/missions")
+
+        assert response.status_code == 500
+        assert "invalid answer_key.options" in response.json()["detail"]
 
 
 class TestClaimWithEvidence:
