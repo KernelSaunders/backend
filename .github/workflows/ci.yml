@@ -109,9 +109,9 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
     
-    - name: Run model tests
+    - name: Run model tests with coverage
       run: |
-        pytest tests/models/ -v
+        pytest tests/models/ -v --cov=src.models --cov-report=term-missing
 
   test-routers:
     name: Test Routers
