@@ -1,0 +1,157 @@
+{
+  "counts": {
+    "products": 200,
+    "evidence": 400,
+    "missions": 18,
+    "issues": 30
+  },
+  "categories": ["food", "luxury", "supplements", "other"],
+  "category_distribution": {
+    "food": 80,
+    "luxury": 50,
+    "supplements": 40,
+    "other": 30
+  },
+  "stage_types": ["raw_materials", "processing", "assembly", "transport", "retail"],
+  "claim_types": ["organic", "fair_trade", "sustainable", "cruelty_free", "locally_sourced", "carbon_neutral", "fair_labour", "recycled_content"],
+  "confidence_labels": ["verified", "partially_verified", "unverified"],
+  "evidence_types": ["certificate", "audit_report", "lab_test", "supplier_statement", "photo", "transaction_record"],
+  "evidence_issuers": [
+    "Food Standards Agency", "EHA Consulting Group", "AOECS", "Food Hygiene Company", "Certifier", "ANSI", "Burea Veritas"
+  ],
+  "issue_types": ["claim_false", "evidence_missing", "data_incorrect", "other"],
+  "issue_statuses": ["open", "in_review", "resolved", "dismissed"],
+  "mission_tiers": ["basic", "intermediate", "advanced"],
+  "countries": [
+    "United States", "United Kingdom", "Canada", "Australia", "Zimbabwe", "South Africa", "New Zealand", "India", "China", "Brazil", "Colombia", 
+    "Russia", "Japan", "Mexico", "Greenland", "North Korea", "South Korea", "Pakistan", "Indonesia", "Israel", "Saudi Arabia", "Vietnam", "Thailand", 
+    "Netherlands", "France", "Germany", "Austria", "Italy", "Luxembourg", "Norway", "Sweden"
+  ],
+  "product_templates": {
+    "food": [
+      "{} Oliver Oil", "{} Honey", "{} Chocolate", "{} Mince", "{} Steak", "{} Chicken", "{} Pork", "{} Bacon", "{} Ham", "{} Lard", "{} Butter",
+      "{} Protein Powder", "{} Milk", "{} Chocolate Milk", "{} Apple Juice", "{} Orange Juice", "{} Pomegranate Juice", "{} Rice", "{} Pasta", "{} Potatoes",
+      "{} Sweet Potatoes", "{} Ready-salted crisps", "{} Salt", "{} Pepper", "{} Paprika", "{} Onion Powder", "{} Garlic Powder", "{} Onion",
+      "{} Garlic", "{} Chillis", "{} Peppers", "{} Carrots", "{} Red Onion", "{} Mixed Onions", "{} Salsa", "{} Guacamole", "{} Sour Cream",
+      "{} Beans", "{} Cod", "{} Salmon", "{} Haddock", "{} Tuna", "{} Swordfish", "{} Mackerel", "{} Crab", "{} Venison"
+    ],
+    "luxury": [
+      "{} Scarf", "{} Overcoat", "{} Jacket", "{} Suede Loafers", "{} Handbag", "{} Watch", "{} Sunglasses", "{} Trainers", "{} Caviar",
+      "{} Diamond Ring", "{} Pearl Necklace", "{} Pearl Earings", "{} Diamond Ring", "{} Signet Ring", "{} Jet", "{} Champagene", "{} Wine",
+      "{} Lounger", "{} Leather Wallet", "{} Briefcase", "{} Silk Tie", "{} Writing Paper", "{} Supercar", "{} Cigar", "{} Suit", "{} Cashmere Jumper"
+
+    ],
+    "supplements": [
+      "{} Vitamin D", "{} Vitamin C", "{} Vitamin B12", "{} Magnesium Glcinate", "{} Omega3-", "{} Caffeine", "{} Creatine",
+      "{} Iron", "{} Zinc", "{} B Complex", "{} K2", "{} Folic Acid", "{} Ashwaganda", "{} Glutathione", "{} Beetroot Extract"
+    ],
+    "other": [
+      "{} Socks", "{} Bed Linen", "{} Duvet", "{} Headboard", "{} Water Bottle", "{} Lamp", "{} Torch", "{} Charger", "{} Earphones",
+      "{} Running Shoes", "{} Dryer", "{} Washer", "{} Cushion", "{} Bowl", "{} Plant", "{} Lamp Shade", "{} Curtains", "{} Knife", "{} Fork",
+      "{} Spoons", "{} Saucepan", "{} Carpet Cleaner", "{} Carpet", "{} Phone Case", "{} Tshirt", "{} Trousers", "{} Funky Socks"
+    ]
+  },
+  "brand_adjectives": ["Pure", "Natural", "Organic", "Premium", "Essential", "Heritage", "Golden", "Royal", "Fresh", "Wild", "Clean", "Live", "Quintessential"],
+  "brand_nouns": ["Valley", "Grove", "Farm", "Estate", "Springs", "Fields", "Coast", "Mountain", "River", "Forest", "Vibes", "Thoughts", "Living", "Collect", "Designs", "Aesthetics"],
+  "input_names": ["raw materials", "packaging", "additives", "labor", "energy"],
+  "descriptions": {
+    "product": [
+      "Premium quality {} sourced from respected suppliers worldwide.",
+      "Carefully crafted {} made using ethical methods.",
+      "Award-winning {} made using traditional methods.",
+      "Ethically produced {} with full supply chain transparency.",
+      "Highest quality {} verified for quality and authenticity.",
+      "Artisan {} crafted with care and precision.",
+      "Bespoke {} designed by the very best.",
+      "Expertly manufactued {}, ethically sourced.",
+      "Premium {} for only the very best."
+
+    ],
+    "stage": [
+      "Materials inspected and where according to the quality standard",
+      "The products where handled to sufficient standard and care.",
+      "Quality control checks passed.",
+      "Product documentation correctly matched.",
+      "Processing completed under senior management.",
+      "Testing and verification was successful.",
+      "Packaging checks meet required standards.",
+      "Random sample testing passed."
+    ],
+    "input_notes": [
+      "Sourced from certified suppliers.",
+      "Meets organic certification standards.",
+      "Verified through suppliers.",
+      "Highest quality material",
+      "Sustainably harvested",
+      "Fair trade certified source.",
+      "Ethically manufactured.",
+      "No child labour in production"
+    ],
+    "evidence_summary": [
+      "Report confirms compliance with industry standards.",
+      "Audit report from accredited inspection body.",
+      "Laboratory analysis results met the required standards.",
+      "Supplier show supporting documentation."
+    ],
+    "resolution_notes": [
+      "Issue resolved after additional documentation provided.",
+      "Verified by admin following supplier confirmation.",
+      "Dismissed as duplicate entry.",
+      "Resolved through communication with supplier.",
+      "Board meeting productively rediscussed strategy."
+    ],
+    "change_log_summaries": [
+      "Initial record created",
+      "Updated description",
+      "Verified by admin",
+      "Evidence attached",
+      "Status changed",
+      "Location corrected"
+    ]
+  },
+  "claim_rationales": {
+    "verified": [
+      "Certification documents verified and up to date.",
+      "Audit confirms compliance.",
+      "Full documentation provided and validated.",
+      "All evidence meets verification standards."
+    ],
+    "partially_verified": [
+      "supporting documentation pending review.",
+      "Certification valid but awaiting renewal.",
+      "Primary evidence pending review.",
+      "Partial supply chain checks completed."
+    ],
+    "unverified": [
+      "Awaiting documentation from supplier.",
+      "Verification process not yet initiated.",
+      "Additional evidence required for confirmation.",
+      "Pending audit."
+    ]
+  },
+  "issue_descriptions": {
+    "claim_false": [
+      "The organic certification appears to be expired.",
+      "Fair trade claim cannot be verified with provided evidence.",
+      "Sustainable sourcing claim lacks supporting documentation."
+    ],
+    "evidence_missing": [
+      "No certificate provided for the processing stage.",
+      "Missing audit report for supplier verification.",
+      "Lab test results not available for quality claims.",
+      "Required documentation not submitted."
+      
+    ],
+    "data_incorrect": [
+      "Country of origin does not match shipping records.",
+      "Timeline dates appear to be inconsistent.",
+      "Percentage breakdown exceeds 100% somehow."
+    ],
+    "other": [
+      "Product image does not match description.",
+      "Duplicate entry found in the system",
+      "Request for additional supply chain details."
+    ]
+  }
+}
+
