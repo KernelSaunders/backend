@@ -4,7 +4,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 
-class IssueReport(BaseModel):
+class IssueReports(BaseModel):
     issue_id: str
     product_id: str | None = None
     reported_by: str | None = None  # Can be anonymous
