@@ -2,21 +2,8 @@
 
 ## Overview
 
-This document outlines the test architecture that has been set up for the backend project. The test suite uses **pytest** as the testing framework and follows best practices for organizing and structuring tests.
+This document outlines the test architecture that has been set up for the backend project. The test suite uses pytest as the testing framework and follows best practices for organizing and structuring tests.
 
-## Implementation Status
-
-| Test File | Total Tests | Implemented | Coverage | Status |
-|-----------|-------------|-------------|----------|---------|
-| `test_config.py` | 9 | 9 | 100% |  Complete |
-| `test_conftest.py` | 11 | 11 | 100% |  Complete |
-| `test_database.py` | 12 | 12 | 100% |  Complete |
-| `test_claim.py` | 20 | 20 | 100% |  Complete |
-| `test_issue.py` | 51 | 51 | 100% |  Complete |
-| `test_product.py` | 30 | 30 | 100% |  Complete |
-| `test_user.py` | 30 | 30 | 100% |  Complete |
-| `test_products.py` | 29 | 29 | 100% |  Complete |
-| **Total** | **192** | **192** | **100%** | ** Complete** |
 
 ### Test Results Summary (Last Run: February 5, 2026)
 ```
@@ -24,7 +11,7 @@ This document outlines the test architecture that has been set up for the backen
 ```
 
 ### Fully Implemented Features 
-- **Model Validation Tests** (111 tests) - All Pydantic models comprehensively tested
+- **Model Validation Tests** (111 tests) - All Pydantic models tested
 - **Product Router Tests** (29 tests) - Complete API endpoint testing
 - **Database Operations** (12 tests) - Full database layer coverage
 - **Configuration Management** (9 tests) - Settings and environment validation
@@ -55,7 +42,7 @@ tests/
 ### 1. `conftest.py` - Shared Test Fixtures
 
 Contains reusable pytest fixtures available to all test files:
-- **`client`**: FastAPI TestClient for making HTTP requests to the app
+- **`client`**: FastAPI Test client for making HTTP requests
 - **`mock_supabase_client`**: Mock Supabase client for testing without database calls
 - **`test_settings`**: Test configuration settings
 
@@ -71,7 +58,7 @@ Contains reusable pytest fixtures available to all test files:
 
 **Test Classes:**
 - `TestSettings`: Tests for the Settings configuration class
-  - Default value initialization
+  - Default value initialisation
   - Environment variable loading
   - Field validation for supabase_url, supabase_key, and port
   
@@ -79,9 +66,6 @@ Contains reusable pytest fixtures available to all test files:
   - Instance creation
   - LRU caching behavior
   - Singleton pattern verification
-
-**Setup/Teardown:**
-- Each test method clears the LRU cache to ensure test isolation
 
 ### 3. `test_database.py` - Database Module Tests
 
@@ -119,36 +103,29 @@ Contains reusable pytest fixtures available to all test files:
 
 ### 4. `test_claim.py` - Claim Model Tests
 
-**Status:  COMPLETE (20 tests)**
-
 **Test Classes:**
 - `TestClaim`: Tests for the Claim model
-  - Valid data initialization
+  - Valid data initialisation
   - Minimal required fields
   - Optional fields (product_id, rationale)
   - Confidence label validation (verified, partially_verified, unverified)
   - Invalid confidence label rejection
   - Required field validation
-  - Serialization/deserialization
+  - Serialisation/deserialisation
 
 - `TestEvidence`: Tests for the Evidence model
-  - Valid data initialization
+  - Valid data initialisation
   - Minimal required fields
   - Optional fields (stage_id, claim_id, evidence_date, summary, file_reference)
   - Field alias testing (date → evidence_date)
   - Required field validation
-  - Serialization/deserialization
-
-**Setup/Teardown:**
-- Valid test data dictionaries are created in setup_method
+  - Serialisation/deserialisation
 
 ### 4a. `test_issue.py` - Issue Report and ChangeLog Model Tests
 
-**Status:  COMPLETE (51 tests)**
-
-**Test Classes:**
-- `TestIssueReport`: Tests for the IssueReport model (38 tests)
-  - Valid data initialization
+**Test Classes:*
+- `TestIssueReport`: Tests for the IssueReport model 
+  - Valid data initialisation
   - Minimal required fields
   - Status default value ("open")
   - Type validation (bug, feature_request, data_quality, other)
@@ -156,93 +133,76 @@ Contains reusable pytest fixtures available to all test files:
   - Invalid literal value rejection
   - Optional fields (product_id, reported_by, resolution_note, updated_at)
   - Required field validation for all fields
-  - Serialization/deserialization
+  - Serialisation/deserialisation
   - Resolution handling
 
-- `TestChangeLog`: Tests for the ChangeLog model (13 tests)
-  - Valid data initialization
+- `TestChangeLog`: Tests for the ChangeLog model 
+  - Valid data initialisation
   - Minimal required fields
   - Entity type validation (product, claim, evidence, issue, user)
   - Invalid entity type rejection
   - Optional fields (changed_by)
   - Required field validation for all fields
-  - Serialization/deserialization
+  - Serialisation/deserialisation
   - Timestamp handling
-
-**Setup/Teardown:**
-- Valid test data dictionaries are created in setup_method
-- UUID and datetime fixtures prepared for testing
 
 ### 5. `test_product.py` - Product Models Tests
 
-**Status:  COMPLETE (30 tests)**
-
 **Test Classes:**
 - `TestProduct`: Tests for the Product model
-  - Valid data initialization
+  - Valid data initialisation
   - Minimal required fields
   - Category validation (food, luxury, supplements, other)
   - Invalid category rejection
   - Optional fields (brand, description, image)
   - Required field validation
-  - Serialization/deserialization
+  - Serialisation/deserialisation
 
 - `TestStage`: Tests for the Stage model
-  - Valid data initialization
+  - Valid data initialisation
   - Minimal required fields
   - Optional fields (product_id, location fields, dates, description, sequence_order, created_at)
   - Required field validation
-  - Serialization/deserialization
+  - Serialisation/deserialisation
 
 - `TestInputShare`: Tests for the InputShare model
-  - Valid data initialization
+  - Valid data initialisation
   - Minimal required fields
   - Optional fields (product_id, percentage, notes)
   - Decimal type validation for percentage
   - Required field validation
-  - Serialization/deserialization
-
-**Setup/Teardown:**
-- Valid test data dictionaries with proper types (datetime, date, Decimal) are created in setup_method
-
+  - Serialisation/deserialisation
 ### 6. `test_user.py` - User Models Tests
-
-**Status:  COMPLETE (30 tests)**
 
 **Test Classes:**
 - `TestQuestMission`: Tests for the QuestMission model
-  - Valid data initialization
+  - Valid data initialisation
   - Minimal required fields
   - Tier validation (basic, intermediate, advanced)
   - Grading type validation (auto, manual)
   - Optional fields (product_id, answer_key, explanation_link)
   - Invalid literal value rejection
   - Required field validation
-  - Serialization/deserialization
+  - Serialisation/deserialisation
 
 - `TestUserProgress`: Tests for the UserProgress model
-  - Valid data initialization
+  - Valid data initialisation
   - Minimal required fields
   - Default value for completed field (False)
   - Optional fields (score, attempts, completed_at)
   - Required field validation
-  - Serialization/deserialization
+  - Serialisation/deserialisation
 
 - `TestUserRole`: Tests for the UserRole model
-  - Valid data initialization
+  - Valid data initialisation
   - Minimal required fields
   - Role validation (consumer, verifier, maintainer)
   - Invalid role rejection
   - Optional fields (user_id, role)
   - Required field validation
-  - Serialization/deserialization
-
-**Setup/Teardown:**
-- Valid test data dictionaries are created in setup_method
+  - Serialisation/deserialisation
 
 ### 7. `test_products.py` - Products Router Tests
-
-**Status:  COMPLETE (29 tests)**
 
 **Test Classes:**
 
@@ -367,16 +327,12 @@ This is the core test suite for the product ID search functionality that allows 
 - Empty claims/stages/input_shares handling
 
 #### `TestClaimWithEvidence`: Tests for ClaimWithEvidence model (2 tests - COMPLETE)
-- Initialization
-- Serialization
+- initialisation
+- Serialisation
 
 #### `TestProductTraceability`: Tests for ProductTraceability model (2 tests - COMPLETE)
-- Initialization
-- Serialization
-
-**Setup/Teardown:**
-- TestClient instance is created in setup_method for API testing
-- Mock fixtures configured per test class
+- initialisation
+- Serialisation
 
 ## Testing Patterns Used
 
@@ -405,65 +361,10 @@ Tests cover:
 - Type validation (Literal types, Decimal, dates)
 - Edge cases (empty lists, None values)
 
-## Next Steps
-
-###  All Tests Complete!
-
-The entire test suite has been successfully implemented and is passing:
-
-- **192 total tests** across all modules
-- **100% code coverage** on all models and core functionality
-- **Comprehensive validation** of Pydantic models, API endpoints, database operations, and configuration
-- **CI/CD integration** with GitHub Actions workflow
-
-### Maintenance and Enhancement
-
-To maintain and improve the test suite:
-
-1. **Add tests for new features** as they are developed
-2. **Monitor code coverage** to ensure new code is tested
-3. **Update tests** when requirements change
-4. **Run tests before committing** code changes
-5. **Review test failures** in CI pipeline and fix promptly
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ --cov=src --cov-report=term-missing
-
-# Run specific test suite
-pytest tests/models/ -v              # All model tests
-pytest tests/routers/ -v             # All router tests  
-pytest tests/test_database.py -v    # Database tests
-
-# Run tests in CI mode (parallel, verbose)
-pytest tests/ -v --tb=short
-```
-
 ## Product ID Search Feature - Testing Summary
 
 ### Feature Description
 The product ID search feature allows users to enter a product UUID and retrieve the corresponding product from the database. This is implemented via the `GET /products/{product_id}` endpoint.
-
-### Test Coverage Statistics
-- **Total Tests**: 20 (6 UUID validation + 14 product search)
-- **Implementation Status**:  100% complete
-- **Last Test Run**: February 5, 2026
-- **Status**: All tests passing
-- **Key Areas Covered**:
-  - UUID format validation (valid and invalid formats)
-  - Successful product retrieval
-  - Product not found scenarios
-  - Database interaction verification
-  - Response structure validation
-  - Edge cases (minimal data, case sensitivity)
-  - Error handling (database errors, malformed inputs)
-  - Performance (single query verification)
-  - Security (validation before database access)
 
 ### Quality Assurance
 The extensive test suite ensures:
@@ -492,7 +393,7 @@ pytest tests/models/test_issue.py -v
 pytest tests/test_config.py::TestSettings -v
 
 # Run specific test method
-pytest tests/test_config.py::TestSettings::test_settings_initialization_with_defaults -v
+pytest tests/test_config.py::TestSettings::test_settings_initialisation_with_defaults -v
 
 # Run all model tests
 pytest tests/models/ -v
@@ -529,7 +430,7 @@ PORT=8000
 1. ** Test Isolation**: Each test is independent and doesn't rely on other tests
 2. ** Mock External Dependencies**: Mocks for database calls, API requests, etc.
 3. ** Clear Assertions**: Descriptive assertion messages and clear test names
-4. ** High Coverage**: 100% code coverage on models and core business logic
+4. ** High Coverage**: code coverage on models and core business logic
 5. ** Edge Cases**: Boundary conditions, empty inputs, and error scenarios tested
 6. ** DRY Principle**: Fixtures and helper functions used to avoid duplication
 7. ** Comprehensive Documentation**: All tests documented with clear descriptions
@@ -547,54 +448,11 @@ The test suite is integrated into the GitHub Actions CI/CD pipeline:
 - Configuration tests with environment validation
 - Code formatting and linting checks
 - Type checking with mypy
-```
 
-View the full CI configuration in [.github/workflows/ci.yml](../.github/workflows/ci.yml)
 
----
+#### Test Scenarios
 
-## Quick Reference Guide
-
-### Test Suite Overview
-
-| Category | Test Files | Test Count | Status |
-|----------|-----------|------------|--------|
-| Models | 4 files | 111 tests |  Complete |
-| Routers | 1 file | 29 tests |  Complete |
-| Database | 1 file | 12 tests |  Complete |
-| Config | 1 file | 9 tests |  Complete |
-| Infrastructure | 1 file | 11 tests |  Complete |
-| **Total** | **8 files** | **192 tests** | ** Complete** |
-
-### Product ID Search Feature Tests
-
-#### Running the Tests
-```bash
-# Run all product search tests
-pytest tests/routers/test_products.py::TestGetProduct -v
-
-# Run a specific test
-pytest tests/routers/test_products.py::TestGetProduct::test_get_product_with_valid_id -v
-
-# Run with coverage
-pytest --cov=src.routers.products --cov-report=term-missing tests/routers/test_products.py::TestGetProduct
-```
-
-#### Test Categories
-
-| Category | Test Count | Purpose |
-|----------|-----------|---------|
-| UUID Validation | 6 | Ensure only valid UUIDs reach database |
-| Basic Search | 2 | Test successful product retrieval |
-| Error Handling | 3 | Test 400/404 responses |
-| Database Integration | 2 | Verify correct database calls |
-| Edge Cases | 3 | Test minimal data, case sensitivity |
-| Performance | 1 | Verify single query optimization |
-| Response Validation | 2 | Check response structure |
-
-#### Key Test Scenarios
-
-**Happy Path:**
+**good Path:**
 ```python
 # Valid UUID  Returns product with 200 status
 test_get_product_with_valid_id
