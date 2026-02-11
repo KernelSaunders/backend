@@ -252,7 +252,7 @@ class TestEvidence:
         assert evidence_dict["issuer"] == "Test Certification Body"
 
     def test_evidence_deserialization(self):
-        """Test Evidence deserialization from dict."""
+        """Test Evidence deserialisation from dict."""
         evidence = Evidence(**self.valid_evidence_data)
         evidence_dict = evidence.model_dump()
         deserialized = Evidence(**evidence_dict)
