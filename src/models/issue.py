@@ -23,5 +23,5 @@ class ChangeLog(BaseModel):
     ]
     entity_id: str
     changed_by: str | None = None
-    change_summary: str
+    change_summary: str | dict | None = None 
     timestamp: datetime
