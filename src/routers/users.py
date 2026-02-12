@@ -10,7 +10,7 @@ async def get_my_role(
     user_id: str = Depends(get_current_user_id),
     role: UserRole | None = Depends(get_current_user_role)
 ):
-    user_role = None
+    user_role = "consumer" # default if not verifier (will change)
     if role is not None:
         user_role = role.role
     
