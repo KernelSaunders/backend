@@ -11,6 +11,9 @@ class Claim(BaseModel):
     claim_text: str
     confidence_label: Literal["verified", "partially_verified", "unverified"]
     rationale: str | None = None
+    verified_by: str | None = None 
+    verified_at: datetime | None = None  
+    verification_notes: str | None = None  
     created_at: datetime
     updated_at: datetime
 
