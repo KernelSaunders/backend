@@ -4,7 +4,9 @@ from supabase import Client
 from .database import get_client, select_by_field
 from .models.user import UserRole
 
-async def get_current_user_id(authorisation: str = Header(..., description="Bearer <token>")) -> str:
+async def get_current_user_id(
+    authorisation: str = Header(..., description="Bearer <token>")
+    ) -> str:
     """
     Extracts the JWT token from authorisation header and users it to verify user's ID
     """
@@ -39,4 +41,12 @@ async def get_current_user_role(
     else:
         return None
     
-asy
+async def require_verifier(
+    role: UserRole | None = Depends(get_current_user_role)
+) -> UserRole:
+    """
+    Function we can use to limit things to only people with the verifier role
+    """
+    if role is None or role.role != "verifier":
+        return HTTPException(status_code=403, detail="Access forbidden: verifier role required")
+    return role 
