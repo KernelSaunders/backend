@@ -189,7 +189,6 @@ async def verify_claim(
         new_verified=True,
     )
     
-    #log_claim_change() -> will do later
     return {"status": "verified"}
 
 @router.put("/{product_id}/claims/{claim_id}/unverify")
