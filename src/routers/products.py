@@ -231,3 +231,48 @@ async def update_claim_confidence(
     #log_claim_change()
     
     return {"status": "updated"}
+
+@router.get("?/{product_id}/claims/{claim_id}/history")
+async def get_verification_history(
+    product_id: str,
+    claim_id: str,
+    user_id: str = Depends(get_current_user_id),
+    _verifier: UserRole = Depends(require_verifier)
+):
+    """
+    Get verification history from the ChangeLog table
+    Requiremnts: verifier role
+    """
+    validate_uuid(product_id, "product_id")
+    validate_uuid(claim_id, "claim_id")
+    
+    client = get_client()
+    response = (
+        client.table("ChangeLog")
+        .select("*")
+        .eq("entity_type", "Claim")
+        .eq("entity_id", claim_id)
+        .order("timestamp", desc=True)
+        .execute()
+    )
+
+    return response.data
+
+@router.get("/claims/pending")
+async def get_pending_claims(
+    user_id: str = Depends(get_current_user_id),
+    _verifier: UserRole = Depends(require_verifier),
+):
+    """
+    Get all claims that haven't been verified yet.
+    Requirments: verifier role
+    """
+    client = get_client()
+    response = (
+        client.table("Claim")
+        .select("*")
+        .is_("verified_by", "null")
+        .execute()
+    )
+    
+    return response.data
