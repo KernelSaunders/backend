@@ -29,9 +29,3 @@ class Evidence(BaseModel):
     file_reference: str | None = None
     created_at: datetime
 
-class VerifyClaimRequest(BaseModel):
-    notes: str | None = None
-    
-class UpdateConfidenceRequest(BaseModel):
-    confidence_label: str 
-    notes: str | None = None
