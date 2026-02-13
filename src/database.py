@@ -53,3 +53,37 @@ def upsert_batch(table_name: str, records: list[dict], batch_size: int = 500) ->
         client.table(table_name).upsert(batch).execute()
         total += len(batch)
     return total
+
+# Function to record a verification change to a claim 
+def log_claim_change(
+    claim_id: str,
+    changed_by: str,
+    action: str,
+    old_confidence: str | None = None,
+    new_confidence: str | None = None,
+    notes: str | None = None,
+    old_verified: bool | None = None,
+    new_verified: bool | None = None,
+):
+    # Our jsonb way of storing what we have changed in a readable format
+    summary = {
+        "action": action
+    }
+    
+    if old_confidence or new_confidence:
+        summary["old_confidence"] = old_confidence
+        summary["new_confidence"] = new_confidence
+    if notes:
+        summary["notes"] = notes 
+    if old_verified is not None: #i.e Had some verified status before
+        summary["old_verified_status"] = old_verified
+        summary["new_verified_status"] = new_verified
+        
+    # Creates connection with db and updates ChangeLog
+    client = get_client()
+    client.table("ChangeLog").insert({
+        "entity_type": "Claim",
+        "entity_id": claim_id,
+        "changed_by": changed_by,
+        "change_summary": summary,
+    }).execute()
