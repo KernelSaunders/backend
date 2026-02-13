@@ -262,7 +262,7 @@ async def update_claim_confidence(
     
     return {"status": "updated"}
 
-@router.get("?/{product_id}/claims/{claim_id}/history")
+@router.get("/{product_id}/claims/{claim_id}/history")
 async def get_verification_history(
     product_id: str,
     claim_id: str,
