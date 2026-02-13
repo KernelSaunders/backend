@@ -49,6 +49,25 @@ class QuestMissionPublic(BaseModel):
 def get_products() -> list[Product]:
     return select_all(Product)
 
+# Moved up here as causing bugs with route below
+@router.get("/claims/pending")
+async def get_pending_claims(
+    user_id: str = Depends(get_current_user_id),
+    _verifier: UserRole = Depends(require_verifier),
+):
+    """
+    Get all claims that haven't been verified yet.
+    Requirments: verifier role
+    """
+    client = get_client()
+    response = (
+        client.table("Claim")
+        .select("*")
+        .is_("verified_by", "null")
+        .execute()
+    )
+    
+    return response.data
 
 @router.get("/{product_id}")
 def get_product(product_id: str) -> Product:
@@ -144,11 +163,10 @@ async def verify_claim(
     validate_uuid(claim_id)
     
     # Fetch current state
-    claims = select_by_id(Claim, "claim_id", claim_id)
-    if not claims:
-        raise HTTPException(status_code=401, detail="No such claim")
-    current_claim = claims[0]
-    
+    current_claim = select_by_id(Claim, "claim_id", claim_id)
+    if not current_claim:
+        raise HTTPException(status_code=404, detail="No such claim")
+
     # Creates connect with db
     # Updates the claim
     client = get_client()
@@ -191,11 +209,10 @@ async def unverify_claim(
     validate_uuid(claim_id)
     
     # Fetch current state
-    claims = select_by_id(Claim, "claim_id", claim_id)
-    if not claims:
-        raise HTTPException(status_code=401, detail="No such claim")
-    current_claim = claims[0]
-    
+    current_claim = select_by_id(Claim, "claim_id", claim_id)
+    if not current_claim:
+        raise HTTPException(status_code=404, detail="No such claim")
+
     # Creates connect with db
     # Updates the claim
     client = get_client()
@@ -237,11 +254,10 @@ async def update_claim_confidence(
     validate_uuid(claim_id)
     
     # Fetch current state
-    claims = select_by_id(Claim, "claim_id", claim_id)
-    if not claims:
-        raise HTTPException(status_code=401, detail="No such claim")
-    current_claim = claims[0]
-    
+    current_claim = select_by_id(Claim, "claim_id", claim_id)
+    if not current_claim:
+        raise HTTPException(status_code=404, detail="No such claim")
+
     # Creates connect with db
     # Updates the claim
     client = get_client()
@@ -288,21 +304,3 @@ async def get_verification_history(
 
     return response.data
 
-@router.get("/claims/pending")
-async def get_pending_claims(
-    user_id: str = Depends(get_current_user_id),
-    _verifier: UserRole = Depends(require_verifier),
-):
-    """
-    Get all claims that haven't been verified yet.
-    Requirments: verifier role
-    """
-    client = get_client()
-    response = (
-        client.table("Claim")
-        .select("*")
-        .is_("verified_by", "null")
-        .execute()
-    )
-    
-    return response.data
