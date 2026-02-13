@@ -11,7 +11,7 @@ __all__ = [
     "Evidence",
     "QuestMission",
     "UserProgress",
-    "UserRoles",
+    "UserRole",
     "IssueReport",
     "ChangeLog",
 ]
