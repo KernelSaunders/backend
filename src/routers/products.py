@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from ..models import Claim, Evidence, InputShare, Product, QuestMission, Stage, UserRole
-from ..database import select_all, select_by_id, select_by_field, get_client
+from ..database import select_all, select_by_id, select_by_field, get_client, log_claim_change
 
 from ..auth import get_current_user_id, get_current_user_role, require_verifier
 
@@ -159,6 +159,18 @@ async def verify_claim(
         "confidence_label": "verified"
     }).eq("claim_id", claim_id).execute()
     
+    # Log the change
+    log_claim_change(
+        claim_id=claim_id,
+        changed_by=user_id,
+        action="verified",
+        old_confidence=current_claim.confidence_label,
+        new_confidence="verified",
+        notes=notes,
+        old_verified=False,
+        new_verified=True,
+    )
+    
     #log_claim_change() -> will do later
     return {"status": "verified"}
 
@@ -194,7 +206,16 @@ async def unverify_claim(
         "confidence_label": "unverified"
     }).eq("claim_id", claim_id).execute()
     
-    #log_claim_change()
+    log_claim_change(
+        claim_id=claim_id,
+        changed_by=user_id,
+        action="unverified",
+        old_confidence=current_claim.confidence_label,
+        new_confidence="unverified",
+        notes=notes,
+        old_verified=True,
+        new_verified=False,
+    )
     
     return {"status": "unverified"}
 
@@ -227,8 +248,17 @@ async def update_claim_confidence(
     client.table("Claim").update({
         "confidence_label": confidence_label
     }).eq("claim_id", claim_id).execute()
-    
-    #log_claim_change()
+
+    log_claim_change(
+        claim_id=claim_id,
+        changed_by=user_id,
+        action="confidence_updated",
+        old_confidence=current_claim.confidence_label,
+        new_confidence=confidence_label,
+        notes=notes,
+        old_verified=current_claim.verified_by is not None, 
+        new_verified=current_claim.verified_by is not None,
+    )
     
     return {"status": "updated"}
 
