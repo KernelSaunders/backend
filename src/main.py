@@ -1,13 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .config import get_settings
 from .routers import missions_router, products_router, users_router
+
+settings = get_settings()
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[settings.frontend_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

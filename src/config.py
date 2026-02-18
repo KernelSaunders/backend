@@ -9,6 +9,7 @@ load_dotenv()
 class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_key: str = ""
+    frontend_url: str = "http://localhost:3000"
     port: int = 8000
 
     class Config:
