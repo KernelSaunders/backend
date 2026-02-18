@@ -1,18 +1,17 @@
 from functools import lru_cache
 
 from dotenv import load_dotenv
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
+
     supabase_url: str = ""
     supabase_key: str = ""
     port: int = 8000
-
-    class Config:
-        env_file = ".env"
 
 
 @lru_cache

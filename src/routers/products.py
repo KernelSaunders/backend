@@ -103,7 +103,9 @@ def get_product_missions(product_id: str) -> list[QuestMissionPublic]:
         if m.grading_type != "auto":
             continue
 
-        if not isinstance(options, list) or not all(isinstance(o, str) for o in options):
+        if not isinstance(options, list) or not all(
+            isinstance(o, str) for o in options
+        ):
             raise HTTPException(
                 status_code=500,
                 detail=f"QuestMission {m.mission_id} has invalid answer_key.options",

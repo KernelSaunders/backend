@@ -27,7 +27,7 @@ class TestProduct:
     def test_product_initialization_with_valid_data(self):
         """Test Product initialization with valid data."""
         product = Product(**self.valid_product_data)
-        
+
         assert product.product_id == "test-product-id"
         assert product.name == "Test Product"
         assert product.category == "food"
@@ -47,7 +47,7 @@ class TestProduct:
             "updated_at": datetime.now(),
         }
         product = Product(**minimal_data)
-        
+
         assert product.product_id == "min-product"
         assert product.brand is None
         assert product.description is None
@@ -56,7 +56,7 @@ class TestProduct:
     def test_product_category_validation(self):
         """Test that category accepts only valid literals."""
         valid_categories = ["food", "luxury", "supplements", "other"]
-        
+
         for category in valid_categories:
             data = self.valid_product_data.copy()
             data["category"] = category
@@ -67,10 +67,10 @@ class TestProduct:
         """Test that invalid category raises ValidationError."""
         data = self.valid_product_data.copy()
         data["category"] = "invalid_category"
-        
+
         with pytest.raises(ValidationError) as exc_info:
             Product(**data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("category",) for error in errors)
 
@@ -79,7 +79,7 @@ class TestProduct:
         data = self.valid_product_data.copy()
         data["brand"] = None
         product = Product(**data)
-        
+
         assert product.brand is None
 
     def test_product_description_optional(self):
@@ -87,7 +87,7 @@ class TestProduct:
         data = self.valid_product_data.copy()
         data["description"] = None
         product = Product(**data)
-        
+
         assert product.description is None
 
     def test_product_image_optional(self):
@@ -95,20 +95,20 @@ class TestProduct:
         data = self.valid_product_data.copy()
         data["image"] = None
         product = Product(**data)
-        
+
         assert product.image is None
 
     def test_product_required_fields_missing(self):
         """Test that missing required fields raises ValidationError."""
         required_fields = ["product_id", "name", "category", "created_at", "updated_at"]
-        
+
         for field in required_fields:
             data = self.valid_product_data.copy()
             del data[field]
-            
+
             with pytest.raises(ValidationError) as exc_info:
                 Product(**data)
-            
+
             errors = exc_info.value.errors()
             assert any(error["loc"] == (field,) for error in errors)
 
@@ -116,7 +116,7 @@ class TestProduct:
         """Test Product serialization to dict."""
         product = Product(**self.valid_product_data)
         product_dict = product.model_dump()
-        
+
         assert isinstance(product_dict, dict)
         assert product_dict["product_id"] == "test-product-id"
         assert product_dict["name"] == "Test Product"
@@ -127,7 +127,7 @@ class TestProduct:
         product = Product(**self.valid_product_data)
         product_dict = product.model_dump()
         deserialized = Product(**product_dict)
-        
+
         assert deserialized.product_id == product.product_id
         assert deserialized.name == product.name
         assert deserialized.category == product.category
@@ -154,7 +154,7 @@ class TestStage:
     def test_stage_initialization_with_valid_data(self):
         """Test Stage initialization with valid data."""
         stage = Stage(**self.valid_stage_data)
-        
+
         assert stage.stage_id == "test-stage-id"
         assert stage.product_id == "test-product-id"
         assert stage.stage_type == "production"
@@ -173,7 +173,7 @@ class TestStage:
             "stage_type": "packaging",
         }
         stage = Stage(**minimal_data)
-        
+
         assert stage.stage_id == "min-stage"
         assert stage.product_id is None
         assert stage.location_country is None
@@ -189,7 +189,7 @@ class TestStage:
         data = self.valid_stage_data.copy()
         data["product_id"] = None
         stage = Stage(**data)
-        
+
         assert stage.product_id is None
 
     def test_stage_location_fields_optional(self):
@@ -198,7 +198,7 @@ class TestStage:
         data["location_country"] = None
         data["location_region"] = None
         stage = Stage(**data)
-        
+
         assert stage.location_country is None
         assert stage.location_region is None
 
@@ -208,7 +208,7 @@ class TestStage:
         data["start_date"] = None
         data["end_date"] = None
         stage = Stage(**data)
-        
+
         assert stage.start_date is None
         assert stage.end_date is None
 
@@ -217,7 +217,7 @@ class TestStage:
         data = self.valid_stage_data.copy()
         data["description"] = None
         stage = Stage(**data)
-        
+
         assert stage.description is None
 
     def test_stage_sequence_order_optional(self):
@@ -225,7 +225,7 @@ class TestStage:
         data = self.valid_stage_data.copy()
         data["sequence_order"] = None
         stage = Stage(**data)
-        
+
         assert stage.sequence_order is None
 
     def test_stage_created_at_optional(self):
@@ -233,20 +233,20 @@ class TestStage:
         data = self.valid_stage_data.copy()
         data["created_at"] = None
         stage = Stage(**data)
-        
+
         assert stage.created_at is None
 
     def test_stage_required_fields_missing(self):
         """Test that missing required fields raises ValidationError."""
         required_fields = ["stage_id", "stage_type"]
-        
+
         for field in required_fields:
             data = self.valid_stage_data.copy()
             del data[field]
-            
+
             with pytest.raises(ValidationError) as exc_info:
                 Stage(**data)
-            
+
             errors = exc_info.value.errors()
             assert any(error["loc"] == (field,) for error in errors)
 
@@ -254,7 +254,7 @@ class TestStage:
         """Test Stage serialization to dict."""
         stage = Stage(**self.valid_stage_data)
         stage_dict = stage.model_dump()
-        
+
         assert isinstance(stage_dict, dict)
         assert stage_dict["stage_id"] == "test-stage-id"
         assert stage_dict["stage_type"] == "production"
@@ -265,7 +265,7 @@ class TestStage:
         stage = Stage(**self.valid_stage_data)
         stage_dict = stage.model_dump()
         deserialized = Stage(**stage_dict)
-        
+
         assert deserialized.stage_id == stage.stage_id
         assert deserialized.stage_type == stage.stage_type
         assert deserialized.location_country == stage.location_country
@@ -289,7 +289,7 @@ class TestInputShare:
     def test_input_share_initialization_with_valid_data(self):
         """Test InputShare initialization with valid data."""
         input_share = InputShare(**self.valid_input_share_data)
-        
+
         assert input_share.input_id == "test-input-id"
         assert input_share.product_id == "test-product-id"
         assert input_share.input_name == "Test Input"
@@ -307,7 +307,7 @@ class TestInputShare:
             "created_at": datetime.now(),
         }
         input_share = InputShare(**minimal_data)
-        
+
         assert input_share.input_id == "min-input"
         assert input_share.product_id is None
         assert input_share.percentage is None
@@ -318,7 +318,7 @@ class TestInputShare:
         data = self.valid_input_share_data.copy()
         data["product_id"] = None
         input_share = InputShare(**data)
-        
+
         assert input_share.product_id is None
 
     def test_input_share_percentage_optional(self):
@@ -326,7 +326,7 @@ class TestInputShare:
         data = self.valid_input_share_data.copy()
         data["percentage"] = None
         input_share = InputShare(**data)
-        
+
         assert input_share.percentage is None
 
     def test_input_share_percentage_decimal_type(self):
@@ -334,7 +334,7 @@ class TestInputShare:
         data = self.valid_input_share_data.copy()
         data["percentage"] = "50.75"  # Can be provided as string
         input_share = InputShare(**data)
-        
+
         assert isinstance(input_share.percentage, Decimal)
         assert input_share.percentage == Decimal("50.75")
 
@@ -343,20 +343,20 @@ class TestInputShare:
         data = self.valid_input_share_data.copy()
         data["notes"] = None
         input_share = InputShare(**data)
-        
+
         assert input_share.notes is None
 
     def test_input_share_required_fields_missing(self):
         """Test that missing required fields raises ValidationError."""
         required_fields = ["input_id", "input_name", "country", "created_at"]
-        
+
         for field in required_fields:
             data = self.valid_input_share_data.copy()
             del data[field]
-            
+
             with pytest.raises(ValidationError) as exc_info:
                 InputShare(**data)
-            
+
             errors = exc_info.value.errors()
             assert any(error["loc"] == (field,) for error in errors)
 
@@ -364,7 +364,7 @@ class TestInputShare:
         """Test InputShare serialization to dict."""
         input_share = InputShare(**self.valid_input_share_data)
         share_dict = input_share.model_dump()
-        
+
         assert isinstance(share_dict, dict)
         assert share_dict["input_id"] == "test-input-id"
         assert share_dict["input_name"] == "Test Input"
@@ -375,7 +375,7 @@ class TestInputShare:
         input_share = InputShare(**self.valid_input_share_data)
         share_dict = input_share.model_dump()
         deserialized = InputShare(**share_dict)
-        
+
         assert deserialized.input_id == input_share.input_id
         assert deserialized.input_name == input_share.input_name
         assert deserialized.country == input_share.country

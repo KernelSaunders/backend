@@ -18,9 +18,11 @@ def validate_uuid(value: str, field_name: str = "id") -> str:
 
 router = APIRouter(prefix="/missions", tags=["missions"])
 
+
 # request body
 class MissionAttemptIn(BaseModel):
     option_index: int
+
 
 # return body
 class MissionAttemptOut(BaseModel):
@@ -36,8 +38,8 @@ def _norm_answer(value: str) -> str:
 @router.post("/{mission_id}/attempts", response_model=MissionAttemptOut)
 def create_attempt(mission_id: str, attempt: MissionAttemptIn) -> MissionAttemptOut:
     """
-    Validate an attempt and return correctness.
-.
+        Validate an attempt and return correctness.
+    .
     """
     validate_uuid(mission_id, "mission_id")
     mission = select_by_id(QuestMission, "mission_id", mission_id)
@@ -50,9 +52,14 @@ def create_attempt(mission_id: str, attempt: MissionAttemptIn) -> MissionAttempt
 
     # validate the mission first (options are correct, answer is an option)
     if not isinstance(options, list) or not all(isinstance(o, str) for o in options):
-        raise HTTPException(status_code=500, detail="Mission is not attemptable (invalid options)")
+        raise HTTPException(
+            status_code=500, detail="Mission is not attemptable (invalid options)"
+        )
     if not isinstance(correct, str):
-        raise HTTPException(status_code=500, detail="Mission is not attemptable (invalid correct answer)")
+        raise HTTPException(
+            status_code=500,
+            detail="Mission is not attemptable (invalid correct answer)",
+        )
 
     if attempt.option_index < 0 or attempt.option_index >= len(options):
         raise HTTPException(status_code=422, detail="option_index out of range")

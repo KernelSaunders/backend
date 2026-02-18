@@ -27,7 +27,7 @@ class TestIssueReport:
     def test_issue_report_initialization_with_valid_data(self):
         """Test IssueReport initialization with valid data."""
         issue = IssueReport(**self.valid_issue_data)
-        
+
         assert issue.issue_id == "test-issue-id"
         assert issue.product_id == "test-product-id"
         assert issue.reported_by == "user-123"
@@ -47,7 +47,7 @@ class TestIssueReport:
             "created_at": datetime.now(),
         }
         issue = IssueReport(**minimal_data)
-        
+
         assert issue.issue_id == "min-issue-id"
         assert issue.product_id is None
         assert issue.reported_by is None
@@ -72,7 +72,7 @@ class TestIssueReport:
     def test_issue_report_type_validation_all_valid_types(self):
         """Test that type accepts all valid literal values."""
         valid_types = ["claim_false", "evidence_missing", "data_incorrect", "other"]
-        
+
         for issue_type in valid_types:
             data = {
                 "issue_id": f"test-{issue_type}",
@@ -91,17 +91,17 @@ class TestIssueReport:
             "description": "Test",
             "created_at": datetime.now(),
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             IssueReport(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("type",) for error in errors)
 
     def test_issue_report_status_validation_all_valid_statuses(self):
         """Test that status accepts all valid literal values."""
         valid_statuses = ["open", "in_review", "resolved", "dismissed"]
-        
+
         for status in valid_statuses:
             data = {
                 "issue_id": f"test-{status}",
@@ -122,10 +122,10 @@ class TestIssueReport:
             "status": "invalid_status",
             "created_at": datetime.now(),
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             IssueReport(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("status",) for error in errors)
 
@@ -184,10 +184,10 @@ class TestIssueReport:
             "description": "Test",
             "created_at": datetime.now(),
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             IssueReport(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("issue_id",) for error in errors)
 
@@ -198,10 +198,10 @@ class TestIssueReport:
             "description": "Test",
             "created_at": datetime.now(),
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             IssueReport(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("type",) for error in errors)
 
@@ -212,10 +212,10 @@ class TestIssueReport:
             "type": "other",
             "created_at": datetime.now(),
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             IssueReport(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("description",) for error in errors)
 
@@ -226,10 +226,10 @@ class TestIssueReport:
             "type": "other",
             "description": "Test",
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             IssueReport(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("created_at",) for error in errors)
 
@@ -237,7 +237,7 @@ class TestIssueReport:
         """Test IssueReport serialization to dict."""
         issue = IssueReport(**self.valid_issue_data)
         issue_dict = issue.model_dump()
-        
+
         assert isinstance(issue_dict, dict)
         assert issue_dict["issue_id"] == "test-issue-id"
         assert issue_dict["type"] == "claim_false"
@@ -249,7 +249,7 @@ class TestIssueReport:
         issue = IssueReport(**self.valid_issue_data)
         issue_dict = issue.model_dump()
         deserialized = IssueReport(**issue_dict)
-        
+
         assert deserialized.issue_id == issue.issue_id
         assert deserialized.type == issue.type
         assert deserialized.status == issue.status
@@ -267,7 +267,7 @@ class TestIssueReport:
             "updated_at": datetime(2024, 1, 5),
         }
         issue = IssueReport(**data)
-        
+
         assert issue.status == "resolved"
         assert issue.resolution_note == "Claim has been corrected"
         assert issue.updated_at > issue.created_at
@@ -290,7 +290,7 @@ class TestChangeLog:
     def test_changelog_initialization_with_valid_data(self):
         """Test ChangeLog initialization with valid data."""
         log = ChangeLog(**self.valid_changelog_data)
-        
+
         assert log.log_id == "log-123"
         assert log.entity_type == "product"
         assert log.entity_id == "product-456"
@@ -308,7 +308,7 @@ class TestChangeLog:
             "timestamp": datetime.now(),
         }
         log = ChangeLog(**minimal_data)
-        
+
         assert log.log_id == "min-log"
         assert log.entity_type == "claim"
         assert log.changed_by is None
@@ -323,7 +323,7 @@ class TestChangeLog:
             "input_share",
             "mission",
         ]
-        
+
         for entity_type in valid_entity_types:
             data = {
                 "log_id": f"log-{entity_type}",
@@ -344,10 +344,10 @@ class TestChangeLog:
             "change_summary": "Test",
             "timestamp": datetime.now(),
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             ChangeLog(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("entity_type",) for error in errors)
 
@@ -372,10 +372,10 @@ class TestChangeLog:
             "change_summary": "Test",
             "timestamp": datetime.now(),
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             ChangeLog(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("log_id",) for error in errors)
 
@@ -387,10 +387,10 @@ class TestChangeLog:
             "change_summary": "Test",
             "timestamp": datetime.now(),
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             ChangeLog(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("entity_type",) for error in errors)
 
@@ -402,10 +402,10 @@ class TestChangeLog:
             "change_summary": "Test",
             "timestamp": datetime.now(),
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             ChangeLog(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("entity_id",) for error in errors)
 
@@ -417,10 +417,10 @@ class TestChangeLog:
             "entity_id": "product-123",
             "timestamp": datetime.now(),
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             ChangeLog(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("change_summary",) for error in errors)
 
@@ -432,10 +432,10 @@ class TestChangeLog:
             "entity_id": "product-123",
             "change_summary": "Test",
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             ChangeLog(**invalid_data)
-        
+
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("timestamp",) for error in errors)
 
@@ -443,7 +443,7 @@ class TestChangeLog:
         """Test ChangeLog serialization to dict."""
         log = ChangeLog(**self.valid_changelog_data)
         log_dict = log.model_dump()
-        
+
         assert isinstance(log_dict, dict)
         assert log_dict["log_id"] == "log-123"
         assert log_dict["entity_type"] == "product"
@@ -455,7 +455,7 @@ class TestChangeLog:
         log = ChangeLog(**self.valid_changelog_data)
         log_dict = log.model_dump()
         deserialized = ChangeLog(**log_dict)
-        
+
         assert deserialized.log_id == log.log_id
         assert deserialized.entity_type == log.entity_type
         assert deserialized.entity_id == log.entity_id
@@ -473,7 +473,7 @@ class TestChangeLog:
             "timestamp": now,
         }
         log = ChangeLog(**data)
-        
+
         assert log.timestamp == now
         assert log.timestamp.year == 2024
         assert log.timestamp.month == 6
