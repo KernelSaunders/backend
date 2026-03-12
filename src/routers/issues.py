@@ -5,7 +5,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
 
-from ..models import IssueReport
+from ..models import IssueReports
 from ..database import select_by_id, get_client, insert_one, update_by_id, log_entity_change
 from ..auth import get_current_user_id, require_verifier
 
@@ -18,7 +18,7 @@ class IssueCreate(BaseModel):
 
 
 class IssueUpdate(BaseModel):
-    status: Literal["open", "in_review", "resolved", "dismissed"]
+    status: Literal["open", "under_review", "resolved", "rejected"]
     resolution_note: str | None = None
 
 
@@ -96,7 +96,7 @@ async def update_issue(
     _verifier=Depends(require_verifier),
 ):
     """Update issue status. Requires verifier role."""
-    current = select_by_id(IssueReport, "issue_id", issue_id)
+    current = select_by_id(IssueReports, "issue_id", issue_id)
     if not current:
         raise HTTPException(status_code=404, detail="Issue not found")
 
