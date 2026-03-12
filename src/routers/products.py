@@ -68,7 +68,7 @@ class ClaimCreate(BaseModel):
 class EvidenceCreate(BaseModel):
     type: str
     issuer: str
-    evidence_date: str | None = None
+    date: str | None = None
     summary: str | None = None
     file_reference: str | None = None
     stage_id: str | None = None
