@@ -63,7 +63,7 @@ async def create_issue(
     if user_id:
         record["reported_by"] = user_id
 
-    row = insert_one("IssueReport", record)
+    row = insert_one("IssueReports", record)
     return row
 
 
@@ -79,7 +79,7 @@ async def list_issues(
     Supports optional filters: status, product_id.
     """
     client = get_client()
-    query = client.table("IssueReport").select("*")
+    query = client.table("IssueReports").select("*")
     if status:
         query = query.eq("status", status)
     if product_id:
@@ -104,7 +104,7 @@ async def update_issue(
     if body.resolution_note is not None:
         updates["resolution_note"] = body.resolution_note
 
-    row = update_by_id("IssueReport", "issue_id", issue_id, updates)
+    row = update_by_id("IssueReports", "issue_id", issue_id, updates)
     log_entity_change(
         "issue",
         issue_id,
