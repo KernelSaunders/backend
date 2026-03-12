@@ -34,6 +34,19 @@ class ProductTraceability(BaseModel):
     claims: list[ClaimWithEvidence]
 
 
+class ClaimEvidenceGroup(BaseModel):
+    claim_id: str
+    claim_type: str
+    claim_text: str
+    confidence_label: str
+    evidence: list[Evidence]
+
+
+class ProductEvidenceView(BaseModel):
+    product_id: str
+    groups: list[ClaimEvidenceGroup]
+
+
 class QuestMissionPublic(BaseModel):
     mission_id: str
     product_id: str
@@ -104,6 +117,33 @@ def get_product_traceability(product_id: str) -> ProductTraceability:
         input_shares=input_shares,
         claims=claims_with_evidence,
     )
+
+
+@router.get("/{product_id}/evidence")
+def get_product_evidence(product_id: str) -> ProductEvidenceView:
+    """
+    Returns evidence grouped by claim, shaped for the evidence view.
+    Only includes claims that have at least one evidence item.
+    """
+    validate_uuid(product_id, "product_id")
+    product = select_by_id(Product, "product_id", product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    claims = select_by_field(Claim, "product_id", product_id)
+    groups: list[ClaimEvidenceGroup] = []
+    for claim in claims:
+        evidence = select_by_field(Evidence, "claim_id", claim.claim_id)
+        if evidence:
+            groups.append(ClaimEvidenceGroup(
+                claim_id=claim.claim_id,
+                claim_type=claim.claim_type,
+                claim_text=claim.claim_text,
+                confidence_label=claim.confidence_label,
+                evidence=evidence,
+            ))
+
+    return ProductEvidenceView(product_id=product_id, groups=groups)
 
 
 @router.get("/{product_id}/missions", response_model=list[QuestMissionPublic])
