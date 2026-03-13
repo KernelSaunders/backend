@@ -31,7 +31,7 @@ class ProductTraceability(BaseModel):
     product: Product
     stages: list[Stage]
     input_shares: list[InputShare]
-    claims: list[ClaimWithEvidence]
+    claims: list[Claim]
 
 
 class ClaimEvidenceGroup(BaseModel):
@@ -39,6 +39,7 @@ class ClaimEvidenceGroup(BaseModel):
     claim_type: str
     claim_text: str
     confidence_label: str
+    rationale: str | None = None
     evidence: list[Evidence]
 
 
@@ -104,18 +105,12 @@ def get_product_traceability(product_id: str) -> ProductTraceability:
     input_shares = select_by_field(InputShare, "product_id", product_id)
 
     claims = select_by_field(Claim, "product_id", product_id)
-    claims_with_evidence = []
-
-    # Consider making this async
-    for claim in claims:
-        evidence = select_by_field(Evidence, "claim_id", claim.claim_id)
-        claims_with_evidence.append(ClaimWithEvidence(claim=claim, evidence=evidence))
 
     return ProductTraceability(
         product=product,
         stages=stages,
         input_shares=input_shares,
-        claims=claims_with_evidence,
+        claims=claims,
     )
 
 
@@ -181,6 +176,29 @@ def get_product_missions(product_id: str) -> list[QuestMissionPublic]:
             )
         )
     return public
+
+@router.get("/{product_id}/claims/{claim_id}/evidence")
+def get_claim_evidence(product_id: str, claim_id: str) -> ClaimEvidenceGroup:
+    """
+    Returns evidence for a single claim, shaped for the drill-down evidence view.
+    """
+    validate_uuid(product_id, "product_id")
+    validate_uuid(claim_id, "claim_id")
+
+    claim = select_by_id(Claim, "claim_id", claim_id)
+    if not claim or claim.product_id != product_id:
+        raise HTTPException(status_code=404, detail="Claim not found")
+
+    evidence = select_by_field(Evidence, "claim_id", claim_id)
+    return ClaimEvidenceGroup(
+        claim_id=claim.claim_id,
+        claim_type=claim.claim_type,
+        claim_text=claim.claim_text,
+        confidence_label=claim.confidence_label,
+        rationale=claim.rationale,
+        evidence=evidence,
+    )
+
 
 @router.put("/{product_id}/claims/{claim_id}/verify")
 async def verify_claim(
