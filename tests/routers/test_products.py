@@ -2,19 +2,25 @@
 
 """Tests for products router."""
 
+from datetime import datetime
+from unittest import mock
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-
+from src.auth import get_current_user_id, get_current_user_role
 from src.main import app
+from src.models import Claim, Evidence, InputShare, Product, Stage
+from src.models.user import UserRole
 from src.routers.products import (
-    validate_uuid,
-    router,
     ClaimWithEvidence,
     ProductTraceability,
+    router,
+    validate_uuid,
 )
-from src.models import Product, Stage, InputShare, Claim, Evidence
+
+from tests.conftest import TEST_USER_ID
 
 
 class TestValidateUuid:
@@ -413,3 +419,61 @@ class TestProductTraceability:
         """Test ProductTraceability serialization to dict."""
         # TODO: Implement test
         pass
+
+
+class TestCreateProduct:
+    """Test suite for POST /products endpoint"""
+
+    def setup_method(self):
+        """Set up test dependencies."""
+        self.valid_body = {
+            "name": "Test Product",
+            "category": "food",
+            "brand": "Test Brand",
+            "description": "A test product",
+        }
+
+    # patch replaces the function being called with a mock function
+    @patch("src.routers.products.log_entity_change")
+    @patch("src.routers.products.insert_one")
+    def test_create_product_success(self, mock_insert, mock_log, verifier_client):
+        """Test successful creation of a product."""
+        mock_insert.return_value = {
+            "product_id": "0000-0000-0000-0000",
+            **self.valid_body,
+        }  # ** allows this to add the dictionary to this one
+
+        response = verifier_client.post("/products", json=self.valid_body)
+        assert response.status_code == 201
+
+        mock_insert.assert_called_once()
+        assert mock_insert.call_args[0][0] == "Product"
+        mock_log.assert_called_once()
+
+    def test_create_product_missing_name(self, verifier_client):
+        body = {"category": "food"}
+        response = verifier_client.post("/products", json=body)
+        assert response.status_code == 422
+
+    def test_create_product_invalid_category(self, verifier_client):
+        body = {"name": "Test", "category": "invalid_category"}
+        response = verifier_client.post("/products", json=body)
+        assert response.status_code == 422
+
+    def test_create_product_no_auth(self, client):
+        response = client.post("/products", json=self.valid_body)
+        assert response.status_code in (401, 422)
+
+    def test_create_product_non_verifier(self, client):
+        # Override user_id but NOT require_verifier, should get 403
+        app.dependency_overrides[get_current_user_id] = lambda: TEST_USER_ID
+        # Return a consumer role, require_verifier should reject with 403
+        app.dependency_overrides[get_current_user_role] = lambda: UserRole(
+            role_id="role-00000000-0000-0000-0000-000000000002",
+            user_id=TEST_USER_ID,
+            role="consumer",
+            created_at=datetime(2026, 1, 1),
+        )
+        response = client.post("/products", json=self.valid_body)
+        app.dependency_overrides.clear()
+        assert response.status_code == 403
