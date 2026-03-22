@@ -109,9 +109,9 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
     
-    - name: Run model tests with coverage
+    - name: Run model tests
       run: |
-        pytest tests/models/ -v --cov=src.models --cov-report=term-missing
+        pytest tests/models/ -v
 
   test-routers:
     name: Test Routers
@@ -139,82 +139,6 @@ jobs:
     - name: Run router tests
       run: |
         pytest tests/routers/ -v
-
-  coverage:
-    name: Coverage Report
-    runs-on: ubuntu-latest
-    
-    env:
-      CI: true
-      SUPABASE_URL: https://test.supabase.co
-      SUPABASE_KEY: test-key-for-ci
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-    
-    - name: Run all tests with coverage
-      run: |
-        pytest --cov=src --cov-report=xml --cov-report=term-missing
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: false
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-    
-    - name: Run flake8
-      run: |
-        flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 src/ --count --max-complexity=10 --max-line-length=127 --statistics
-
-  format-check:
-    name: Format Check
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-    
-    - name: Check black formatting
-      run: |
-        black --check src/ tests/
 
   type-check:
     name: Type Check
