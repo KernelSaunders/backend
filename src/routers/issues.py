@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
@@ -23,7 +23,7 @@ class IssueUpdate(BaseModel):
 
 
 async def get_optional_user_id(
-    authorization: Optional[str] = Header(default=None),
+    authorization: Annotated[str | None, Header()] = None,
 ) -> str | None:
     """Return user_id if a valid Bearer token is provided, else None."""
     if not authorization or not authorization.startswith("Bearer "):
