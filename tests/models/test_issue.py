@@ -420,6 +420,56 @@ class TestChangeLog:
         log = ChangeLog(**data)
         assert log.change_summary is None
 
+    def test_changelog_change_summary_dict_payload(self):
+        """change_summary accepts JSON-shaped dict (e.g. DB JSONB rows)."""
+        summary = {
+            "action": "verified",
+            "old_confidence": "unverified",
+            "new_confidence": "verified",
+            "notes": "Evidence reviewed",
+        }
+        data = {
+            "log_id": "log-jsonb-1",
+            "entity_type": "claim",
+            "entity_id": "claim-789",
+            "change_summary": summary,
+            "timestamp": datetime(2024, 1, 1, 12, 0, 0),
+        }
+        log = ChangeLog(**data)
+        assert log.change_summary == summary
+        assert isinstance(log.change_summary, dict)
+        assert log.change_summary["action"] == "verified"
+
+    def test_changelog_change_summary_nested_dict(self):
+        """Nested structures in change_summary are preserved."""
+        summary = {
+            "action": "updated",
+            "old": {"name": "A", "category": "food"},
+            "new": {"name": "B", "category": "food"},
+        }
+        log = ChangeLog(
+            log_id="log-nested",
+            entity_type="product",
+            entity_id="p-1",
+            change_summary=summary,
+            timestamp=datetime(2024, 5, 5, 0, 0, 0),
+        )
+        assert log.change_summary["old"]["name"] == "A"
+        assert log.change_summary["new"]["name"] == "B"
+
+    def test_changelog_change_summary_dict_serialization_roundtrip(self):
+        summary = {"action": "confidence_updated", "old_confidence": "partially_verified"}
+        log = ChangeLog(
+            log_id="log-rt",
+            entity_type="claim",
+            entity_id="c-1",
+            change_summary=summary,
+            timestamp=datetime(2024, 1, 2, 0, 0, 0),
+        )
+        restored = ChangeLog(**log.model_dump())
+        assert restored.change_summary == summary
+        assert isinstance(restored.change_summary, dict)
+
     def test_changelog_required_fields_missing_timestamp(self):
         """Test that missing timestamp raises ValidationError."""
         invalid_data = {
