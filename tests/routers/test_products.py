@@ -757,6 +757,67 @@ class TestGetPendingClaims:
         mock_client.table.assert_called_with("Claim")
 
 
+class TestGetPendingClaimsAuthRequired:
+    """GET /products/claims/pending without dependency overrides."""
+
+    def setup_method(self):
+        self.client = TestClient(app)
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def test_missing_authorization_returns_422(self):
+        app.dependency_overrides.clear()
+        r = self.client.get("/products/claims/pending")
+        assert r.status_code == 422
+        assert any(
+            e.get("loc") == ["header", "authorization"] and e.get("type") == "missing"
+            for e in r.json()["detail"]
+        )
+
+    def test_invalid_bearer_token_returns_401(self):
+        app.dependency_overrides.clear()
+        mock_auth = MagicMock()
+        mock_auth.auth.get_user.side_effect = Exception("invalid")
+
+        with patch("src.auth.get_client", return_value=mock_auth):
+            r = self.client.get(
+                "/products/claims/pending",
+                headers={"Authorization": "Bearer bad"},
+            )
+
+        assert r.status_code == 401
+        assert r.json()["detail"] == "Invalid token"
+
+    def test_authenticated_consumer_returns_403(self):
+        """Valid JWT path but UserRole is not verifier → require_verifier rejects."""
+        app.dependency_overrides.clear()
+        uid = "99999999-9999-9999-9999-999999999999"
+        mock_user = MagicMock()
+        mock_user.id = uid
+        mock_auth_resp = MagicMock()
+        mock_auth_resp.user = mock_user
+        mock_supa = MagicMock()
+        mock_supa.auth.get_user.return_value = mock_auth_resp
+
+        consumer_role = UserRole(
+            role_id="role-consumer",
+            user_id=uid,
+            role="consumer",
+            created_at=datetime(2026, 1, 1),
+        )
+
+        with patch("src.auth.get_client", return_value=mock_supa):
+            with patch("src.auth.select_by_field", return_value=[consumer_role]):
+                r = self.client.get(
+                    "/products/claims/pending",
+                    headers={"Authorization": "Bearer valid.jwt.token"},
+                )
+
+        assert r.status_code == 403
+        assert r.json()["detail"] == "Access forbidden: verifier role required"
+
+
 class TestGetProductEvidence:
     @patch("src.routers.products.select_by_field")
     @patch("src.routers.products.select_by_id")

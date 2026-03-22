@@ -310,3 +310,76 @@ class TestUpdateIssueEndpoint:
             json={"status": "invalid_status"},
         )
         assert response.status_code == 422
+
+
+_ISSUE_UUID = "550e8400-e29b-41d4-a716-446655440000"
+
+
+class TestListIssuesAuthRequired:
+    """GET /issues with real auth dependencies (no overrides)."""
+
+    def setup_method(self):
+        self.client = TestClient(app)
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def test_missing_authorization_returns_422(self):
+        app.dependency_overrides.clear()
+        r = self.client.get("/issues")
+        assert r.status_code == 422
+        assert any(
+            e.get("loc") == ["header", "authorization"] and e.get("type") == "missing"
+            for e in r.json()["detail"]
+        )
+
+    def test_invalid_bearer_token_returns_401(self):
+        app.dependency_overrides.clear()
+        mock_client = MagicMock()
+        mock_client.auth.get_user.side_effect = Exception("bad token")
+
+        with patch("src.auth.get_client", return_value=mock_client):
+            r = self.client.get(
+                "/issues",
+                headers={"Authorization": "Bearer invalid"},
+            )
+
+        assert r.status_code == 401
+        assert r.json()["detail"] == "Invalid token"
+
+
+class TestUpdateIssueAuthRequired:
+    """PUT /issues/{issue_id} with real auth dependencies (no overrides)."""
+
+    def setup_method(self):
+        self.client = TestClient(app)
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def test_missing_authorization_returns_422(self):
+        app.dependency_overrides.clear()
+        r = self.client.put(
+            f"/issues/{_ISSUE_UUID}",
+            json={"status": "resolved"},
+        )
+        assert r.status_code == 422
+        assert any(
+            e.get("loc") == ["header", "authorization"] and e.get("type") == "missing"
+            for e in r.json()["detail"]
+        )
+
+    def test_invalid_bearer_token_returns_401(self):
+        app.dependency_overrides.clear()
+        mock_client = MagicMock()
+        mock_client.auth.get_user.side_effect = Exception("bad token")
+
+        with patch("src.auth.get_client", return_value=mock_client):
+            r = self.client.put(
+                f"/issues/{_ISSUE_UUID}",
+                json={"status": "resolved"},
+                headers={"Authorization": "Bearer invalid"},
+            )
+
+        assert r.status_code == 401
+        assert r.json()["detail"] == "Invalid token"

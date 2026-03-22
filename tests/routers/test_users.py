@@ -1,6 +1,8 @@
 """Tests for users router."""
 
 from datetime import datetime
+from unittest.mock import MagicMock, patch
+
 from fastapi.testclient import TestClient
 
 from src.auth import get_current_user_id, get_current_user_role
@@ -100,3 +102,48 @@ class TestGetMyRoleEndpoint:
 
         assert response.status_code == 200
         assert response.json() == {"user_id": self.user_id, "role": "consumer"}
+
+
+class TestGetMyRoleAuthRequired:
+    """GET /users/me/role without dependency overrides — real auth stack."""
+
+    def setup_method(self):
+        self.client = TestClient(app)
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def test_missing_authorization_header_returns_422(self):
+        """FastAPI reports missing required Header as 422 validation error."""
+        app.dependency_overrides.clear()
+        response = self.client.get("/users/me/role")
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert any(
+            err.get("loc") == ["header", "authorization"] and err.get("type") == "missing"
+            for err in detail
+        )
+
+    def test_non_bearer_scheme_returns_401(self):
+        app.dependency_overrides.clear()
+        response = self.client.get(
+            "/users/me/role",
+            headers={"Authorization": "Token not-bearer"},
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Invalid auth header"
+
+    def test_invalid_bearer_token_returns_401(self):
+        app.dependency_overrides.clear()
+        mock_client = MagicMock()
+        mock_client.auth.get_user.side_effect = Exception("invalid jwt")
+
+        with patch("src.auth.get_client", return_value=mock_client):
+            response = self.client.get(
+                "/users/me/role",
+                headers={"Authorization": "Bearer bad-token"},
+            )
+
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Invalid token"
+        mock_client.auth.get_user.assert_called_once_with("bad-token")
