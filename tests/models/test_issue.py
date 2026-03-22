@@ -4,11 +4,11 @@ import pytest
 from datetime import datetime
 from pydantic import ValidationError
 
-from src.models.issue import IssueReport, ChangeLog
+from src.models.issue import IssueReports, ChangeLog
 
 
-class TestIssueReport:
-    """Test suite for IssueReport model."""
+class TestIssueReports:
+    """Test suite for IssueReports model."""
 
     def setup_method(self):
         """Set up test fixtures before each test method."""
@@ -25,8 +25,8 @@ class TestIssueReport:
         }
 
     def test_issue_report_initialization_with_valid_data(self):
-        """Test IssueReport initialization with valid data."""
-        issue = IssueReport(**self.valid_issue_data)
+        """Test IssueReports initialization with valid data."""
+        issue = IssueReports(**self.valid_issue_data)
         
         assert issue.issue_id == "test-issue-id"
         assert issue.product_id == "test-product-id"
@@ -39,14 +39,14 @@ class TestIssueReport:
         assert issue.updated_at == datetime(2024, 1, 2, 12, 0, 0)
 
     def test_issue_report_initialization_with_minimal_required_fields(self):
-        """Test IssueReport initialization with only required fields."""
+        """Test IssueReports initialization with only required fields."""
         minimal_data = {
             "issue_id": "min-issue-id",
             "type": "other",
             "description": "Minimal issue",
             "created_at": datetime.now(),
         }
-        issue = IssueReport(**minimal_data)
+        issue = IssueReports(**minimal_data)
         
         assert issue.issue_id == "min-issue-id"
         assert issue.product_id is None
@@ -66,7 +66,7 @@ class TestIssueReport:
             "description": "Test",
             "created_at": datetime.now(),
         }
-        issue = IssueReport(**data)
+        issue = IssueReports(**data)
         assert issue.status == "open"
 
     def test_issue_report_type_validation_all_valid_types(self):
@@ -80,7 +80,7 @@ class TestIssueReport:
                 "description": "Test description",
                 "created_at": datetime.now(),
             }
-            issue = IssueReport(**data)
+            issue = IssueReports(**data)
             assert issue.type == issue_type
 
     def test_issue_report_type_invalid_value(self):
@@ -93,14 +93,14 @@ class TestIssueReport:
         }
         
         with pytest.raises(ValidationError) as exc_info:
-            IssueReport(**invalid_data)
+            IssueReports(**invalid_data)
         
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("type",) for error in errors)
 
     def test_issue_report_status_validation_all_valid_statuses(self):
         """Test that status accepts all valid literal values."""
-        valid_statuses = ["open", "in_review", "resolved", "dismissed"]
+        valid_statuses = ["open", "under_review", "resolved", "rejected"]
         
         for status in valid_statuses:
             data = {
@@ -110,7 +110,7 @@ class TestIssueReport:
                 "status": status,
                 "created_at": datetime.now(),
             }
-            issue = IssueReport(**data)
+            issue = IssueReports(**data)
             assert issue.status == status
 
     def test_issue_report_status_invalid_value(self):
@@ -124,7 +124,7 @@ class TestIssueReport:
         }
         
         with pytest.raises(ValidationError) as exc_info:
-            IssueReport(**invalid_data)
+            IssueReports(**invalid_data)
         
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("status",) for error in errors)
@@ -138,7 +138,7 @@ class TestIssueReport:
             "description": "Test",
             "created_at": datetime.now(),
         }
-        issue = IssueReport(**data)
+        issue = IssueReports(**data)
         assert issue.product_id is None
 
     def test_issue_report_reported_by_optional_for_anonymous(self):
@@ -150,7 +150,7 @@ class TestIssueReport:
             "description": "Anonymous report",
             "created_at": datetime.now(),
         }
-        issue = IssueReport(**data)
+        issue = IssueReports(**data)
         assert issue.reported_by is None
 
     def test_issue_report_resolution_note_optional(self):
@@ -162,7 +162,7 @@ class TestIssueReport:
             "resolution_note": None,
             "created_at": datetime.now(),
         }
-        issue = IssueReport(**data)
+        issue = IssueReports(**data)
         assert issue.resolution_note is None
 
     def test_issue_report_updated_at_optional(self):
@@ -174,7 +174,7 @@ class TestIssueReport:
             "created_at": datetime.now(),
             "updated_at": None,
         }
-        issue = IssueReport(**data)
+        issue = IssueReports(**data)
         assert issue.updated_at is None
 
     def test_issue_report_required_fields_missing_issue_id(self):
@@ -186,7 +186,7 @@ class TestIssueReport:
         }
         
         with pytest.raises(ValidationError) as exc_info:
-            IssueReport(**invalid_data)
+            IssueReports(**invalid_data)
         
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("issue_id",) for error in errors)
@@ -200,7 +200,7 @@ class TestIssueReport:
         }
         
         with pytest.raises(ValidationError) as exc_info:
-            IssueReport(**invalid_data)
+            IssueReports(**invalid_data)
         
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("type",) for error in errors)
@@ -214,7 +214,7 @@ class TestIssueReport:
         }
         
         with pytest.raises(ValidationError) as exc_info:
-            IssueReport(**invalid_data)
+            IssueReports(**invalid_data)
         
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("description",) for error in errors)
@@ -228,14 +228,14 @@ class TestIssueReport:
         }
         
         with pytest.raises(ValidationError) as exc_info:
-            IssueReport(**invalid_data)
+            IssueReports(**invalid_data)
         
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("created_at",) for error in errors)
 
     def test_issue_report_serialization(self):
-        """Test IssueReport serialization to dict."""
-        issue = IssueReport(**self.valid_issue_data)
+        """Test IssueReports serialization to dict."""
+        issue = IssueReports(**self.valid_issue_data)
         issue_dict = issue.model_dump()
         
         assert isinstance(issue_dict, dict)
@@ -245,10 +245,10 @@ class TestIssueReport:
         assert isinstance(issue_dict["created_at"], datetime)
 
     def test_issue_report_deserialization(self):
-        """Test IssueReport deserialization from dict."""
-        issue = IssueReport(**self.valid_issue_data)
+        """Test IssueReports deserialization from dict."""
+        issue = IssueReports(**self.valid_issue_data)
         issue_dict = issue.model_dump()
-        deserialized = IssueReport(**issue_dict)
+        deserialized = IssueReports(**issue_dict)
         
         assert deserialized.issue_id == issue.issue_id
         assert deserialized.type == issue.type
@@ -256,7 +256,7 @@ class TestIssueReport:
         assert deserialized.description == issue.description
 
     def test_issue_report_with_resolution(self):
-        """Test IssueReport with resolution details."""
+        """Test IssueReports with resolution details."""
         data = {
             "issue_id": "resolved-issue",
             "type": "claim_false",
@@ -266,7 +266,7 @@ class TestIssueReport:
             "created_at": datetime(2024, 1, 1),
             "updated_at": datetime(2024, 1, 5),
         }
-        issue = IssueReport(**data)
+        issue = IssueReports(**data)
         
         assert issue.status == "resolved"
         assert issue.resolution_note == "Claim has been corrected"
@@ -409,20 +409,16 @@ class TestChangeLog:
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("entity_id",) for error in errors)
 
-    def test_changelog_required_fields_missing_change_summary(self):
-        """Test that missing change_summary raises ValidationError."""
-        invalid_data = {
+    def test_changelog_change_summary_optional_defaults_to_none(self):
+        """change_summary is optional on the model; omitted means None."""
+        data = {
             "log_id": "log-123",
             "entity_type": "product",
             "entity_id": "product-123",
             "timestamp": datetime.now(),
         }
-        
-        with pytest.raises(ValidationError) as exc_info:
-            ChangeLog(**invalid_data)
-        
-        errors = exc_info.value.errors()
-        assert any(error["loc"] == ("change_summary",) for error in errors)
+        log = ChangeLog(**data)
+        assert log.change_summary is None
 
     def test_changelog_required_fields_missing_timestamp(self):
         """Test that missing timestamp raises ValidationError."""
