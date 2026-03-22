@@ -21,6 +21,12 @@ jobs:
             pytest_target: tests/test_auth.py
           - group_label: "Unit · Shared fixtures (conftest)"
             pytest_target: tests/test_conftest.py
+          - group_label: "App · FastAPI wiring (main)"
+            pytest_target: tests/test_main_app.py
+          - group_label: "CLI · run.py entrypoint"
+            pytest_target: tests/test_run.py
+          - group_label: "Scripts · demo"
+            pytest_target: tests/test_scripts_demo.py
           - group_label: "Models · Product, stage & input share"
             pytest_target: tests/models/test_product.py
           - group_label: "Models · Claim & evidence"
