@@ -37,12 +37,18 @@ jobs:
             pytest_target: tests/models/test_user.py
           - group_label: "API · Products router"
             pytest_target: tests/routers/test_products.py
+          - group_label: "Schemas · Products router (Pydantic)"
+            pytest_target: tests/routers/test_products_schemas.py
           - group_label: "API · Missions router"
             pytest_target: tests/routers/test_missions.py
+          - group_label: "Schemas · Missions router (Pydantic)"
+            pytest_target: tests/routers/test_missions_schemas.py
           - group_label: "API · Users router"
             pytest_target: tests/routers/test_users.py
           - group_label: "API · Issues router"
             pytest_target: tests/routers/test_issues.py
+          - group_label: "Schemas · Issues router (Pydantic)"
+            pytest_target: tests/routers/test_issues_schemas.py
 
     env:
       CI: true
