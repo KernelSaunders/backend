@@ -636,6 +636,13 @@ class TestCreateStage:
         r = verifier_client.post(f"/products/{PID}/stages", json={"stage_type": "x"})
         assert r.status_code == 404
 
+    def test_create_stage_invalid_product_uuid_returns_400(self, verifier_client):
+        r = verifier_client.post(
+            "/products/not-a-uuid/stages", json={"stage_type": "x"}
+        )
+        assert r.status_code == 400
+        assert "product_id" in r.json()["detail"] or "Invalid" in r.json()["detail"]
+
 
 class TestUpdateStage:
     @patch("src.routers.products.log_entity_change")
@@ -663,6 +670,20 @@ class TestUpdateStage:
         mock_sel.return_value = _sample_stage()
         r = verifier_client.put(f"/products/{PID}/stages/{STAGE_ID}", json={})
         assert r.status_code == 400
+
+    def test_update_stage_invalid_stage_uuid_returns_400(self, verifier_client):
+        r = verifier_client.put(
+            f"/products/{PID}/stages/not-a-uuid", json={"description": "x"}
+        )
+        assert r.status_code == 400
+        assert "stage_id" in r.json()["detail"]
+
+    def test_update_stage_invalid_product_uuid_returns_400(self, verifier_client):
+        r = verifier_client.put(
+            f"/products/bad-uuid/stages/{STAGE_ID}", json={"description": "x"}
+        )
+        assert r.status_code == 400
+        assert "product_id" in r.json()["detail"]
 
 
 class TestCreateClaim:
@@ -740,6 +761,26 @@ class TestCreateEvidence:
             json={"type": "doc", "issuer": "Gov"},
         )
         assert r.status_code == 404
+
+    @patch("src.routers.products.select_by_id")
+    def test_create_evidence_invalid_product_uuid_returns_400(self, mock_sel, verifier_client):
+        r = verifier_client.post(
+            f"/products/not-a-uuid/claims/{CLAIM_ID}/evidence",
+            json={"type": "doc", "issuer": "Gov"},
+        )
+        assert r.status_code == 400
+        assert "product_id" in r.json()["detail"]
+        mock_sel.assert_not_called()
+
+    @patch("src.routers.products.select_by_id")
+    def test_create_evidence_invalid_claim_uuid_returns_400(self, mock_sel, verifier_client):
+        r = verifier_client.post(
+            f"/products/{PID}/claims/not-a-uuid/evidence",
+            json={"type": "doc", "issuer": "Gov"},
+        )
+        assert r.status_code == 400
+        assert "claim_id" in r.json()["detail"]
+        mock_sel.assert_not_called()
 
 
 class TestGetPendingClaims:
@@ -847,6 +888,11 @@ class TestGetProductEvidence:
         mock_sid.return_value = None
         assert client.get(f"/products/{PID}/evidence").status_code == 404
 
+    def test_invalid_product_uuid_returns_400(self, client):
+        r = client.get("/products/not-a-uuid/evidence")
+        assert r.status_code == 400
+        assert "product_id" in r.json()["detail"]
+
 
 class TestGetProductMissions:
     @patch("src.routers.products.select_by_field")
@@ -900,6 +946,12 @@ class TestGetProductMissions:
         r = client.get(f"/products/{PID}/missions")
         assert r.status_code == 500
 
+    @patch("src.routers.products.select_by_id")
+    def test_product_not_found_returns_404(self, mock_sid, client):
+        mock_sid.return_value = None
+        r = client.get(f"/products/{PID}/missions")
+        assert r.status_code == 404
+
 
 class TestGetClaimEvidence:
     @patch("src.routers.products.select_by_field")
@@ -921,6 +973,22 @@ class TestGetClaimEvidence:
         c = _sample_claim()
         object.__setattr__(c, "product_id", "99999999-9999-9999-9999-999999999999")
         mock_sid.return_value = c
+        r = client.get(f"/products/{PID}/claims/{CLAIM_ID}/evidence")
+        assert r.status_code == 404
+
+    def test_invalid_product_uuid_returns_400(self, client):
+        r = client.get(f"/products/bad-uuid/claims/{CLAIM_ID}/evidence")
+        assert r.status_code == 400
+        assert "product_id" in r.json()["detail"]
+
+    def test_invalid_claim_uuid_returns_400(self, client):
+        r = client.get(f"/products/{PID}/claims/not-a-uuid/evidence")
+        assert r.status_code == 400
+        assert "claim_id" in r.json()["detail"]
+
+    @patch("src.routers.products.select_by_id")
+    def test_claim_not_found_returns_404(self, mock_sid, client):
+        mock_sid.return_value = None
         r = client.get(f"/products/{PID}/claims/{CLAIM_ID}/evidence")
         assert r.status_code == 404
 
@@ -957,6 +1025,16 @@ class TestVerifyClaim:
         r = verifier_client.put(f"/products/{PID}/claims/{CLAIM_ID}/verify")
         assert r.status_code == 404
 
+    def test_verify_invalid_product_uuid_returns_400(self, verifier_client):
+        r = verifier_client.put(f"/products/bad/claims/{CLAIM_ID}/verify")
+        assert r.status_code == 400
+        assert "Invalid" in r.json()["detail"]
+
+    def test_verify_invalid_claim_uuid_returns_400(self, verifier_client):
+        r = verifier_client.put(f"/products/{PID}/claims/not-a-uuid/verify")
+        assert r.status_code == 400
+        assert "Invalid" in r.json()["detail"]
+
 
 class TestUnverifyClaim:
     @patch("src.routers.products.log_claim_change")
@@ -969,6 +1047,20 @@ class TestUnverifyClaim:
         assert r.status_code == 200
         assert r.json() == {"status": "unverified"}
         mock_log.assert_called_once()
+
+    @patch("src.routers.products.select_by_id")
+    def test_unverify_claim_not_found_returns_404(self, mock_sid, verifier_client):
+        mock_sid.return_value = None
+        r = verifier_client.put(f"/products/{PID}/claims/{CLAIM_ID}/unverify")
+        assert r.status_code == 404
+
+    def test_unverify_invalid_product_uuid_returns_400(self, verifier_client):
+        r = verifier_client.put(f"/products/bad-uuid/claims/{CLAIM_ID}/unverify")
+        assert r.status_code == 400
+
+    def test_unverify_invalid_claim_uuid_returns_400(self, verifier_client):
+        r = verifier_client.put(f"/products/{PID}/claims/bad-uuid/unverify")
+        assert r.status_code == 400
 
 
 class TestUpdateClaimConfidence:
@@ -985,6 +1077,33 @@ class TestUpdateClaimConfidence:
         assert r.status_code == 200
         assert r.json() == {"status": "updated"}
         mock_log.assert_called_once()
+
+    @patch("src.routers.products.select_by_id")
+    def test_confidence_claim_not_found_returns_404(self, mock_sid, verifier_client):
+        mock_sid.return_value = None
+        r = verifier_client.put(
+            f"/products/{PID}/claims/{CLAIM_ID}/confidence",
+            params={"confidence_label": "unverified"},
+        )
+        assert r.status_code == 404
+
+    def test_confidence_missing_query_param_returns_422(self, verifier_client):
+        r = verifier_client.put(f"/products/{PID}/claims/{CLAIM_ID}/confidence")
+        assert r.status_code == 422
+
+    def test_confidence_invalid_product_uuid_returns_400(self, verifier_client):
+        r = verifier_client.put(
+            f"/products/not-uuid/claims/{CLAIM_ID}/confidence",
+            params={"confidence_label": "unverified"},
+        )
+        assert r.status_code == 400
+
+    def test_confidence_invalid_claim_uuid_returns_400(self, verifier_client):
+        r = verifier_client.put(
+            f"/products/{PID}/claims/not-uuid/confidence",
+            params={"confidence_label": "unverified"},
+        )
+        assert r.status_code == 400
 
 
 class TestGetVerificationHistory:

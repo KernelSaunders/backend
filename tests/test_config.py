@@ -29,6 +29,10 @@ class TestSettings:
         """Clean up after each test method."""
         get_settings.cache_clear()
 
+    def test_settings_declares_env_file_dotenv(self):
+        """Settings is configured to load from a project-root .env file."""
+        assert Settings.model_config.get("env_file") == ".env"
+
     def test_settings_initialization_with_defaults(self, monkeypatch):
         """Test Settings initialization with default values."""
         _clear_settings_env(monkeypatch)
@@ -37,6 +41,16 @@ class TestSettings:
         assert settings.supabase_key == ""
         assert settings.frontend_url == "http://localhost:3000"
         assert settings.port == 8000
+
+    def test_settings_only_frontend_url_env(self, monkeypatch):
+        """When only FRONTEND_URL is set, other fields use defaults."""
+        _clear_settings_env(monkeypatch)
+        monkeypatch.setenv("FRONTEND_URL", "https://frontend-only.example")
+        s = Settings(_env_file=None)
+        assert s.frontend_url == "https://frontend-only.example"
+        assert s.supabase_url == ""
+        assert s.supabase_key == ""
+        assert s.port == 8000
 
     def test_settings_initialization_with_env_vars(self, monkeypatch):
         """Test Settings initialization with environment variables."""

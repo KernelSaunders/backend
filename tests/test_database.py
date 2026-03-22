@@ -18,8 +18,8 @@ from src.database import (
 )
 
 
-# Test model for mock database operations
-class TestModel(BaseModel):
+# Pydantic model for mock DB rows (name avoids pytest collecting as a test class).
+class DbFixtureRow(BaseModel):
     id: str
     name: str
     value: int
@@ -112,10 +112,10 @@ class TestSelectAll:
         self.mock_client.table.return_value.select.return_value.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            result = select_all(TestModel)
+            result = select_all(DbFixtureRow)
         
         assert len(result) == 2
-        assert isinstance(result[0], TestModel)
+        assert isinstance(result[0], DbFixtureRow)
         assert result[0].id == "1"
         assert result[0].name == "Test1"
         assert result[1].id == "2"
@@ -128,9 +128,9 @@ class TestSelectAll:
         self.mock_client.table.return_value.select.return_value.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            select_all(TestModel)
+            select_all(DbFixtureRow)
         
-        self.mock_client.table.assert_called_once_with("TestModel")
+        self.mock_client.table.assert_called_once_with("DbFixtureRow")
 
     def test_select_all_with_empty_response(self):
         """Test select_all when database returns empty list."""
@@ -140,7 +140,7 @@ class TestSelectAll:
         self.mock_client.table.return_value.select.return_value.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            result = select_all(TestModel)
+            result = select_all(DbFixtureRow)
         
         assert result == []
         assert isinstance(result, list)
@@ -155,10 +155,10 @@ class TestSelectAll:
         self.mock_client.table.return_value.select.return_value.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            result = select_all(TestModel)
+            result = select_all(DbFixtureRow)
         
         # Verify the model validation worked
-        assert isinstance(result[0], TestModel)
+        assert isinstance(result[0], DbFixtureRow)
         assert result[0].id == "1"
         assert result[0].value == 100
 
@@ -178,10 +178,10 @@ class TestSelectById:
         self.mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            result = select_by_id(TestModel, "id", "123")
+            result = select_by_id(DbFixtureRow, "id", "123")
         
         assert result is not None
-        assert isinstance(result, TestModel)
+        assert isinstance(result, DbFixtureRow)
         assert result.id == "123"
         assert result.name == "Test"
 
@@ -193,7 +193,7 @@ class TestSelectById:
         self.mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            result = select_by_id(TestModel, "id", "nonexistent")
+            result = select_by_id(DbFixtureRow, "id", "nonexistent")
         
         assert result is None
 
@@ -208,9 +208,9 @@ class TestSelectById:
         mock_eq.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            select_by_id(TestModel, "custom_id", "456")
+            select_by_id(DbFixtureRow, "custom_id", "456")
         
-        self.mock_client.table.assert_called_once_with("TestModel")
+        self.mock_client.table.assert_called_once_with("DbFixtureRow")
         mock_select.eq.assert_called_once_with("custom_id", "456")
 
     def test_select_by_id_validates_model(self):
@@ -221,10 +221,10 @@ class TestSelectById:
         self.mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            result = select_by_id(TestModel, "id", "789")
+            result = select_by_id(DbFixtureRow, "id", "789")
         
         # Verify model validation worked correctly
-        assert isinstance(result, TestModel)
+        assert isinstance(result, DbFixtureRow)
         assert result.id == "789"
         assert result.value == 555
 
@@ -247,10 +247,10 @@ class TestSelectByField:
         self.mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            result = select_by_field(TestModel, "value", "100")
+            result = select_by_field(DbFixtureRow, "value", "100")
         
         assert len(result) == 2
-        assert all(isinstance(item, TestModel) for item in result)
+        assert all(isinstance(item, DbFixtureRow) for item in result)
         assert result[0].name == "Match1"
         assert result[1].name == "Match2"
 
@@ -265,9 +265,9 @@ class TestSelectByField:
         mock_eq.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            select_by_field(TestModel, "name", "TestName")
+            select_by_field(DbFixtureRow, "name", "TestName")
         
-        self.mock_client.table.assert_called_once_with("TestModel")
+        self.mock_client.table.assert_called_once_with("DbFixtureRow")
         mock_select.eq.assert_called_once_with("name", "TestName")
 
     def test_select_by_field_with_empty_response(self):
@@ -278,7 +278,7 @@ class TestSelectByField:
         self.mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            result = select_by_field(TestModel, "name", "NonExistent")
+            result = select_by_field(DbFixtureRow, "name", "NonExistent")
         
         assert result == []
         assert isinstance(result, list)
@@ -294,10 +294,10 @@ class TestSelectByField:
         self.mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
         
         with patch("src.database.get_client", return_value=self.mock_client):
-            result = select_by_field(TestModel, "value", "50")
+            result = select_by_field(DbFixtureRow, "value", "50")
         
         # Verify validation worked
-        assert all(isinstance(item, TestModel) for item in result)
+        assert all(isinstance(item, DbFixtureRow) for item in result)
         assert all(item.value == 50 for item in result)
 
 

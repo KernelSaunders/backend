@@ -125,6 +125,53 @@ class TestCreateIssueEndpoint:
         response = self.client.post("/issues", json={"type": "other"})
         assert response.status_code == 422
 
+    @pytest.mark.parametrize(
+        "issue_type",
+        ["claim_false", "evidence_missing", "data_incorrect", "other"],
+    )
+    @patch("src.routers.issues.insert_one")
+    def test_create_issue_accepts_each_type_literal(
+        self, mock_insert_one, issue_type
+    ):
+        body = {
+            **self.body,
+            "type": issue_type,
+            "description": f"desc for {issue_type}",
+        }
+        mock_insert_one.return_value = {
+            "issue_id": f"id-{issue_type}",
+            **body,
+            "status": "open",
+            "created_at": datetime(2026, 1, 1).isoformat(),
+            "updated_at": datetime(2026, 1, 1).isoformat(),
+        }
+        app.dependency_overrides[get_optional_user_id] = lambda: None
+        response = self.client.post("/issues", json=body)
+        assert response.status_code == 201
+        assert response.json()["type"] == issue_type
+        record = mock_insert_one.call_args[0][1]
+        assert record["type"] == issue_type
+
+    @patch("src.routers.issues.insert_one")
+    def test_create_issue_accepts_non_uuid_product_id_string(self, mock_insert_one):
+        """API does not validate product_id as UUID; value is stored as provided."""
+        body = {
+            **self.body,
+            "product_id": "not-a-uuid-but-a-string",
+        }
+        mock_insert_one.return_value = {
+            "issue_id": "id-nu",
+            **body,
+            "status": "open",
+            "created_at": datetime(2026, 1, 1).isoformat(),
+            "updated_at": datetime(2026, 1, 1).isoformat(),
+        }
+        app.dependency_overrides[get_optional_user_id] = lambda: None
+        response = self.client.post("/issues", json=body)
+        assert response.status_code == 201
+        record = mock_insert_one.call_args[0][1]
+        assert record["product_id"] == "not-a-uuid-but-a-string"
+
 
 class TestListIssuesEndpoint:
     """Test suite for GET /issues."""
