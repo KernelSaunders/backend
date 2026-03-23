@@ -54,7 +54,36 @@ def upsert_batch(table_name: str, records: list[dict], batch_size: int = 500) ->
         total += len(batch)
     return total
 
-# Function to record a verification change to a claim 
+def insert_one(table_name: str, record: dict) -> dict:
+    """Insert a single record, return the inserted row."""
+    client = get_client()
+    response = client.table(table_name).insert(record).execute()
+    return response.data[0]
+
+
+def update_by_id(table_name: str, id_field: str, id_value: str, updates: dict) -> dict:
+    """Update a record by its ID field, return the updated row."""
+    client = get_client()
+    response = client.table(table_name).update(updates).eq(id_field, id_value).execute()
+    if not response.data:
+        return {}
+    return response.data[0]
+
+
+def log_entity_change(entity_type: str, entity_id: str, changed_by: str, change_summary: dict) -> None:
+    """Generic change logger — writes to the ChangeLog table."""
+    client = get_client()
+    client.table("ChangeLog").insert(
+        {
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "changed_by": changed_by,
+            "change_summary": change_summary,
+        }
+    ).execute()
+
+
+# Function to record a verification change to a claim
 def log_claim_change(
     claim_id: str,
     changed_by: str,

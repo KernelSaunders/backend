@@ -1,25 +1,77 @@
+import uuid
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ..models import Claim, Evidence, InputShare, Product, QuestMission, Stage, UserRole
-from ..database import select_all, select_by_id, select_by_field, get_client, log_claim_change
-
 from ..auth import get_current_user_id, get_current_user_role, require_verifier
+from ..database import (
+    get_client,
+    insert_one,
+    log_claim_change,
+    log_entity_change,
+    select_all,
+    select_by_field,
+    select_by_id,
+    update_by_id,
+)
+from ..models import Claim, Evidence, InputShare, Product, QuestMission, Stage, UserRole
 
-def validate_uuid(value: str, field_name: str = "id") -> str:
-    """Validate that a string is a valid UUID format."""
-    try:
-        UUID(value)
-        return value
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid {field_name} format")
+
+class ProductCreate(BaseModel):
+    name: str
+    category: Literal["food", "luxury", "supplements", "other"]
+    brand: str | None = None
+    description: str | None = None
+    image: str | None = None
 
 
-router = APIRouter(prefix="/products", tags=["products"])
+class ProductUpdate(BaseModel):
+    name: str | None = None
+    category: Literal["food", "luxury", "supplements", "other"] | None = None
+    brand: str | None = None
+    description: str | None = None
+    image: str | None = None
+
+
+class StageCreate(BaseModel):
+    stage_type: str
+    location_country: str | None = None
+    location_region: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    description: str | None = None
+    sequence_order: int | None = None
+
+
+class StageUpdate(BaseModel):
+    stage_type: str | None = None
+    location_country: str | None = None
+    location_region: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    description: str | None = None
+    sequence_order: int | None = None
+
+
+class ClaimCreate(BaseModel):
+    claim_type: str
+    claim_text: str
+    confidence_label: Literal["verified", "partially_verified", "unverified"] = (
+        "unverified"
+    )
+    rationale: str | None = None
+
+
+class EvidenceCreate(BaseModel):
+    type: str
+    issuer: str
+    date: str | None = None
+    summary: str | None = None
+    file_reference: str | None = None
+    stage_id: str | None = None
 
 
 class ClaimWithEvidence(BaseModel):
@@ -31,7 +83,21 @@ class ProductTraceability(BaseModel):
     product: Product
     stages: list[Stage]
     input_shares: list[InputShare]
-    claims: list[ClaimWithEvidence]
+    claims: list[Claim]
+
+
+class ClaimEvidenceGroup(BaseModel):
+    claim_id: str
+    claim_type: str
+    claim_text: str
+    confidence_label: str
+    rationale: str | None = None
+    evidence: list[Evidence]
+
+
+class ProductEvidenceView(BaseModel):
+    product_id: str
+    groups: list[ClaimEvidenceGroup]
 
 
 class QuestMissionPublic(BaseModel):
@@ -45,9 +111,243 @@ class QuestMissionPublic(BaseModel):
     created_at: datetime
 
 
+def validate_uuid(value: str, field_name: str = "id") -> str:
+    """Validate that a string is a valid UUID format."""
+    try:
+        UUID(value)
+        return value
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid {field_name} format")
+
+
+router = APIRouter(prefix="/products", tags=["products"])
+
+# Routes registration for creating a product
+
+
+@router.post("", status_code=201)
+async def create_product(
+    body: ProductCreate,
+    user_id: str = Depends(get_current_user_id),
+    _verifier: UserRole = Depends(require_verifier),
+):
+    """Create a new product. Requires verifier role."""
+    product_id = str(uuid.uuid4())
+    now = datetime.now().isoformat()
+    record = {
+        "product_id": product_id,
+        **body.model_dump(exclude_none=True),
+        "created_at": now,
+        "updated_at": now,
+    }
+    row = insert_one("Product", record)
+    log_entity_change(
+        "product",
+        product_id,
+        user_id,
+        {"action": "created", "fields": body.model_dump(exclude_none=True)},
+    )
+    return row
+
+
+@router.put("/{product_id}")
+async def update_product(
+    product_id: str,
+    body: ProductUpdate,
+    user_id: str = Depends(get_current_user_id),
+    _verifier: UserRole = Depends(require_verifier),
+):
+    """Update an existing product. Requires verifier role."""
+    validate_uuid(product_id, "product_id")
+    current = select_by_id(Product, "product_id", product_id)
+    if not current:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    updates = body.model_dump(exclude_none=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    updates["updated_at"] = datetime.now().isoformat()
+
+    # Build old vs new for the change log
+    old_values = {}
+    for field in updates:
+        if field != "updated_at":
+            old_values[field] = getattr(current, field)
+    row = update_by_id("Product", "product_id", product_id, updates)
+    log_entity_change(
+        "product",
+        product_id,
+        user_id,
+        {
+            "action": "updated",
+            "old": old_values,
+            "new": body.model_dump(exclude_none=True),
+        },
+    )
+    return row
+
+
+@router.post("/{product_id}/stages", status_code=201)
+async def create_stage(
+    product_id: str,
+    body: StageCreate,
+    user_id: str = Depends(get_current_user_id),
+    _verifier: UserRole = Depends(require_verifier),
+):
+    """Add a stage to a product. Requires verifier role."""
+    validate_uuid(product_id, "product_id")
+    product = select_by_id(Product, "product_id", product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    stage_id = str(uuid.uuid4())
+    record = {
+        "stage_id": stage_id,
+        "product_id": product_id,
+        **body.model_dump(exclude_none=True),
+        "created_at": datetime.now().isoformat(),
+    }
+    row = insert_one("Stage", record)
+    log_entity_change(
+        "stage",
+        stage_id,
+        user_id,
+        {
+            "action": "created",
+            "product_id": product_id,
+            "fields": body.model_dump(exclude_none=True),
+        },
+    )
+    return row
+
+
+@router.put("/{product_id}/stages/{stage_id}")
+async def update_stage(
+    product_id: str,
+    stage_id: str,
+    body: StageUpdate,
+    user_id: str = Depends(get_current_user_id),
+    _verifier: UserRole = Depends(require_verifier),
+):
+    """Update a stage. Requires verifier role."""
+    validate_uuid(product_id, "product_id")
+    validate_uuid(stage_id, "stage_id")
+
+    current = select_by_id(Stage, "stage_id", stage_id)
+    if not current:
+        raise HTTPException(status_code=404, detail="Stage not found")
+
+    updates = body.model_dump(exclude_none=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    old_values = {}
+    for field in updates:
+        old_values[field] = getattr(current, field)
+    row = update_by_id("Stage", "stage_id", stage_id, updates)
+    log_entity_change(
+        "stage",
+        stage_id,
+        user_id,
+        {"action": "updated", "old": old_values, "new": updates},
+    )
+    return row
+
+
+@router.post("/{product_id}/claims", status_code=201)
+async def create_claim(
+    product_id: str,
+    body: ClaimCreate,
+    user_id: str = Depends(get_current_user_id),
+    _verifier: UserRole = Depends(require_verifier),
+):
+    """
+    Add a claim to a product. Requires verifier role.
+    Claims without evidence must be marked unverified with a rationale.
+    """
+    validate_uuid(product_id, "product_id")
+    product = select_by_id(Product, "product_id", product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Integrity rule: non-unverified claims must have evidence (added later), but at
+    # creation time there's no evidence yet, so the claim must be "unverified" with a rationale.
+    if body.confidence_label != "unverified":
+        raise HTTPException(
+            status_code=400,
+            detail="New claims must be marked 'unverified' — add evidence first, then verify.",
+        )
+    if not body.rationale:
+        raise HTTPException(
+            status_code=400,
+            detail="Claims marked 'unverified' must include a rationale.",
+        )
+
+    claim_id = str(uuid.uuid4())
+    now = datetime.now().isoformat()
+    record = {
+        "claim_id": claim_id,
+        "product_id": product_id,
+        **body.model_dump(exclude_none=True),
+        "created_at": now,
+        "updated_at": now,
+    }
+    row = insert_one("Claim", record)
+    log_entity_change(
+        "claim",
+        claim_id,
+        user_id,
+        {
+            "action": "created",
+            "product_id": product_id,
+            "fields": body.model_dump(exclude_none=True),
+        },
+    )
+    return row
+
+
+@router.post("/{product_id}/claims/{claim_id}/evidence", status_code=201)
+async def create_evidence(
+    product_id: str,
+    claim_id: str,
+    body: EvidenceCreate,
+    user_id: str = Depends(get_current_user_id),
+    _verifier: UserRole = Depends(require_verifier),
+):
+    """Add evidence to a claim. Requires verifier role."""
+    validate_uuid(product_id, "product_id")
+    validate_uuid(claim_id, "claim_id")
+
+    claim = select_by_id(Claim, "claim_id", claim_id)
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+
+    evidence_id = str(uuid.uuid4())
+    record = {
+        "evidence_id": evidence_id,
+        "claim_id": claim_id,
+        **body.model_dump(exclude_none=True),
+        "created_at": datetime.now().isoformat(),
+    }
+    row = insert_one("Evidence", record)
+    log_entity_change(
+        "evidence",
+        evidence_id,
+        user_id,
+        {
+            "action": "created",
+            "claim_id": claim_id,
+            "fields": body.model_dump(exclude_none=True),
+        },
+    )
+    return row
+
+
 @router.get("")
 def get_products() -> list[Product]:
     return select_all(Product)
+
 
 # Moved up here as causing bugs with route below
 @router.get("/claims/pending")
@@ -60,14 +360,10 @@ async def get_pending_claims(
     Requirments: verifier role
     """
     client = get_client()
-    response = (
-        client.table("Claim")
-        .select("*")
-        .is_("verified_by", "null")
-        .execute()
-    )
-    
+    response = client.table("Claim").select("*").is_("verified_by", "null").execute()
+
     return response.data
+
 
 @router.get("/{product_id}")
 def get_product(product_id: str) -> Product:
@@ -91,19 +387,40 @@ def get_product_traceability(product_id: str) -> ProductTraceability:
     input_shares = select_by_field(InputShare, "product_id", product_id)
 
     claims = select_by_field(Claim, "product_id", product_id)
-    claims_with_evidence = []
-
-    # Consider making this async
-    for claim in claims:
-        evidence = select_by_field(Evidence, "claim_id", claim.claim_id)
-        claims_with_evidence.append(ClaimWithEvidence(claim=claim, evidence=evidence))
 
     return ProductTraceability(
         product=product,
         stages=stages,
         input_shares=input_shares,
-        claims=claims_with_evidence,
+        claims=claims,
     )
+
+
+@router.get("/{product_id}/evidence")
+def get_product_evidence(product_id: str) -> ProductEvidenceView:
+    """
+    Returns evidence grouped by claim, shaped for the evidence view.
+    Only includes claims that have at least one evidence item.
+    """
+    validate_uuid(product_id, "product_id")
+    product = select_by_id(Product, "product_id", product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    claims = select_by_field(Claim, "product_id", product_id)
+    groups: list[ClaimEvidenceGroup] = []
+    for claim in claims:
+        evidence = select_by_field(Evidence, "claim_id", claim.claim_id)
+        if evidence:
+            groups.append(ClaimEvidenceGroup(
+                claim_id=claim.claim_id,
+                claim_type=claim.claim_type,
+                claim_text=claim.claim_text,
+                confidence_label=claim.confidence_label,
+                evidence=evidence,
+            ))
+
+    return ProductEvidenceView(product_id=product_id, groups=groups)
 
 
 @router.get("/{product_id}/missions", response_model=list[QuestMissionPublic])
@@ -123,7 +440,9 @@ def get_product_missions(product_id: str) -> list[QuestMissionPublic]:
         if m.grading_type != "auto":
             continue
 
-        if not isinstance(options, list) or not all(isinstance(o, str) for o in options):
+        if not isinstance(options, list) or not all(
+            isinstance(o, str) for o in options
+        ):
             raise HTTPException(
                 status_code=500,
                 detail=f"QuestMission {m.mission_id} has invalid answer_key.options",
@@ -141,6 +460,28 @@ def get_product_missions(product_id: str) -> list[QuestMissionPublic]:
             )
         )
     return public
+
+@router.get("/{product_id}/claims/{claim_id}/evidence")
+def get_claim_evidence(product_id: str, claim_id: str) -> ClaimEvidenceGroup:
+    """
+    Returns evidence for a single claim, shaped for the drill-down evidence view.
+    """
+    validate_uuid(product_id, "product_id")
+    validate_uuid(claim_id, "claim_id")
+
+    claim = select_by_id(Claim, "claim_id", claim_id)
+    if not claim or claim.product_id != product_id:
+        raise HTTPException(status_code=404, detail="Claim not found")
+
+    evidence = select_by_field(Evidence, "claim_id", claim_id)
+    return ClaimEvidenceGroup(
+        claim_id=claim.claim_id,
+        claim_type=claim.claim_type,
+        claim_text=claim.claim_text,
+        confidence_label=claim.confidence_label,
+        rationale=claim.rationale,
+        evidence=evidence,
+    )
 
 @router.put("/{product_id}/claims/{claim_id}/verify")
 async def verify_claim(
@@ -161,22 +502,31 @@ async def verify_claim(
     # Ensure correct form
     validate_uuid(product_id)
     validate_uuid(claim_id)
-    
+
     # Fetch current state
     current_claim = select_by_id(Claim, "claim_id", claim_id)
     if not current_claim:
         raise HTTPException(status_code=404, detail="No such claim")
 
+    # Integrity check: claim must have at least one piece of evidence to be verified
+    evidence = select_by_field(Evidence, "claim_id", claim_id)
+    if not evidence:
+        raise HTTPException(
+            status_code=400, detail="Cannot verify a claim with no evidence"
+        )
+
     # Creates connect with db
     # Updates the claim
     client = get_client()
-    client.table("Claim").update({
-        "verified_by": user_id,
-        "verified_at": datetime.now().isoformat(),
-        "verification_notes": notes,
-        "confidence_label": "verified"
-    }).eq("claim_id", claim_id).execute()
-    
+    client.table("Claim").update(
+        {
+            "verified_by": user_id,
+            "verified_at": datetime.now().isoformat(),
+            "verification_notes": notes,
+            "confidence_label": "verified",
+        }
+    ).eq("claim_id", claim_id).execute()
+
     # Log the change
     log_claim_change(
         claim_id=claim_id,
@@ -188,8 +538,9 @@ async def verify_claim(
         old_verified=False,
         new_verified=True,
     )
-    
+
     return {"status": "verified"}
+
 
 @router.put("/{product_id}/claims/{claim_id}/unverify")
 async def unverify_claim(
@@ -203,10 +554,10 @@ async def unverify_claim(
     Remove verification from a claim.
     Requirements: Verifier role
     """
-     # Ensure correct form
+    # Ensure correct form
     validate_uuid(product_id)
     validate_uuid(claim_id)
-    
+
     # Fetch current state
     current_claim = select_by_id(Claim, "claim_id", claim_id)
     if not current_claim:
@@ -215,13 +566,15 @@ async def unverify_claim(
     # Creates connect with db
     # Updates the claim
     client = get_client()
-    client.table("Claim").update({
-        "verified_by": None,
-        "verified_at": None,
-        "verification_notes": notes, #keep for logs
-        "confidence_label": "unverified"
-    }).eq("claim_id", claim_id).execute()
-    
+    client.table("Claim").update(
+        {
+            "verified_by": None,
+            "verified_at": None,
+            "verification_notes": notes,  # keep for logs
+            "confidence_label": "unverified",
+        }
+    ).eq("claim_id", claim_id).execute()
+
     log_claim_change(
         claim_id=claim_id,
         changed_by=user_id,
@@ -232,8 +585,9 @@ async def unverify_claim(
         old_verified=True,
         new_verified=False,
     )
-    
+
     return {"status": "unverified"}
+
 
 @router.put("/{product_id}/claims/{claim_id}/confidence")
 async def update_claim_confidence(
@@ -251,7 +605,7 @@ async def update_claim_confidence(
     # Ensure correct form
     validate_uuid(product_id)
     validate_uuid(claim_id)
-    
+
     # Fetch current state
     current_claim = select_by_id(Claim, "claim_id", claim_id)
     if not current_claim:
@@ -260,9 +614,9 @@ async def update_claim_confidence(
     # Creates connect with db
     # Updates the claim
     client = get_client()
-    client.table("Claim").update({
-        "confidence_label": confidence_label
-    }).eq("claim_id", claim_id).execute()
+    client.table("Claim").update({"confidence_label": confidence_label}).eq(
+        "claim_id", claim_id
+    ).execute()
 
     log_claim_change(
         claim_id=claim_id,
@@ -271,18 +625,19 @@ async def update_claim_confidence(
         old_confidence=current_claim.confidence_label,
         new_confidence=confidence_label,
         notes=notes,
-        old_verified=current_claim.verified_by is not None, 
+        old_verified=current_claim.verified_by is not None,
         new_verified=current_claim.verified_by is not None,
     )
-    
+
     return {"status": "updated"}
+
 
 @router.get("/{product_id}/claims/{claim_id}/history")
 async def get_verification_history(
     product_id: str,
     claim_id: str,
     user_id: str = Depends(get_current_user_id),
-    _verifier: UserRole = Depends(require_verifier)
+    _verifier: UserRole = Depends(require_verifier),
 ):
     """
     Get verification history from the ChangeLog table
@@ -290,7 +645,7 @@ async def get_verification_history(
     """
     validate_uuid(product_id, "product_id")
     validate_uuid(claim_id, "claim_id")
-    
+
     client = get_client()
     response = (
         client.table("ChangeLog")
@@ -302,4 +657,3 @@ async def get_verification_history(
     )
 
     return response.data
-

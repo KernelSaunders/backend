@@ -68,6 +68,54 @@ class TestClaim:
         
         assert claim.rationale is None
 
+    def test_claim_verification_fields_when_set(self):
+        """verified_by, verified_at, and verification_notes round-trip when present."""
+        verifier_id = "00000000-0000-0000-0000-0000000000ab"
+        verified_at = datetime(2024, 6, 15, 14, 30, 0)
+        data = {
+            **self.valid_claim_data,
+            "verified_by": verifier_id,
+            "verified_at": verified_at,
+            "verification_notes": "Cross-checked with supplier audit.",
+        }
+        claim = Claim(**data)
+        assert claim.verified_by == verifier_id
+        assert claim.verified_at == verified_at
+        assert claim.verification_notes == "Cross-checked with supplier audit."
+
+    def test_claim_verified_by_defaults_to_none(self):
+        claim = Claim(**self.valid_claim_data)
+        assert claim.verified_by is None
+
+    def test_claim_verified_at_defaults_to_none(self):
+        claim = Claim(**self.valid_claim_data)
+        assert claim.verified_at is None
+
+    def test_claim_verification_notes_defaults_to_none(self):
+        claim = Claim(**self.valid_claim_data)
+        assert claim.verification_notes is None
+
+    def test_claim_verified_at_accepts_iso_string(self):
+        data = {
+            **self.valid_claim_data,
+            "verified_at": "2024-03-01T12:00:00",
+        }
+        claim = Claim(**data)
+        assert claim.verified_at == datetime(2024, 3, 1, 12, 0, 0)
+
+    def test_claim_verification_fields_serialization_roundtrip(self):
+        data = {
+            **self.valid_claim_data,
+            "verified_by": "user-verifier-1",
+            "verified_at": datetime(2024, 2, 2, 9, 0, 0),
+            "verification_notes": "Approved",
+        }
+        dumped = Claim(**data).model_dump()
+        again = Claim(**dumped)
+        assert again.verified_by == "user-verifier-1"
+        assert again.verified_at == datetime(2024, 2, 2, 9, 0, 0)
+        assert again.verification_notes == "Approved"
+
     def test_claim_confidence_label_validation(self):
         """Test that confidence_label accepts only valid literals."""
         valid_labels = ["verified", "partially_verified", "unverified"]
