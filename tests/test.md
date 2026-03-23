@@ -5,17 +5,18 @@
 This document outlines the test architecture that has been set up for the backend project. The test suite uses pytest as the testing framework and follows best practices for organizing and structuring tests.
 
 
-### Test Results Summary (Last Run: February 5, 2026)
+### Test Results Summary (Last Run: Mar 22, 2026)
 ```
-192 passed in 1.42s
+410 passed, 3 skipped in 1.9s
 ```
 
 ### Fully Implemented Features 
-- **Model Validation Tests** (111 tests) - All Pydantic models tested
-- **Product Router Tests** (29 tests) - Complete API endpoint testing
-- **Database Operations** (12 tests) - Full database layer coverage
-- **Configuration Management** (9 tests) - Settings and environment validation
-- **Test Infrastructure** (11 tests) - Fixture and conftest validation
+- **Model Validation Tests** - All Pydantic models tested
+- **Product Router Tests** - Expanded endpoint branch coverage (missions, evidence, stages, verify/unverify/confidence, verification history, validation errors)
+- **Issues Router Tests** - Parametrized allowed `IssueCreate.type` literals and validated current handling of non-UUID `product_id`
+- **Database Operations** - Full database helper layer coverage
+- **Configuration Management** - Settings env-file behavior and FRONTEND_URL-only scenario validated
+- **Test Infrastructure** - Fixture/conftest behavior covered; test-suite hygiene improved (DB fixture model renamed to avoid pytest collection warnings)
 
 ## Test Structure
 
@@ -23,18 +24,28 @@ The test suite is organized to mirror the source code structure:
 
 ```
 tests/
-├── conftest.py                 # Shared fixtures and configuration (11 tests)
-├── test_config.py              # Tests for config module (9 tests)
-├── test_conftest.py            # Tests for test fixtures (11 tests)
-├── test_database.py            # Tests for database module (12 tests)
-├── test.md                     # This documentation file
+├── conftest.py
+├── test_auth.py
+├── test_config.py
+├── test_conftest.py
+├── test_database.py
+├── test_main_app.py
+├── test_run.py
+├── test_scripts_demo.py
 ├── models/
-│   ├── test_claim.py          # Tests for Claim and Evidence models (20 tests)
-│   ├── test_issue.py          # Tests for IssueReport and ChangeLog models (51 tests)
-│   ├── test_product.py        # Tests for Product, Stage, and InputShare models (30 tests)
-│   └── test_user.py           # Tests for QuestMission, UserProgress, and UserRole models (30 tests)
+│   ├── test_claim.py
+│   ├── test_issue.py
+│   ├── test_product.py
+│   └── test_user.py
 └── routers/
-    └── test_products.py       # Tests for products router endpoints (29 tests)
+    ├── test_auth.py
+    ├── test_issues.py
+    ├── test_issues_schemas.py
+    ├── test_missions.py
+    ├── test_missions_schemas.py
+    ├── test_products.py
+    ├── test_products_schemas.py
+    └── test_users.py
 ```
 
 ## Test Files and Coverage
@@ -100,6 +111,27 @@ Contains reusable pytest fixtures available to all test files:
   - Table name usage
   - Return count verification
   - Custom batch size
+
+### 3a. `test_auth.py` - Authentication Module Tests
+
+Unit tests for authentication helpers in `src.auth`, including extracting user IDs from `Authorization: Bearer ...`,
+resolving user roles, and verifier/role-guard logic.
+
+### 3b. `test_main_app.py` - FastAPI App Wiring Tests
+
+Verifies application wiring:
+- lifespan startup calls the database client initializer (`get_client`)
+- CORS middleware is registered with `allow_origins` matching `settings.frontend_url`
+- routers are mounted on expected path prefixes (`/products`, `/missions`, `/users`, `/issues`)
+
+### 3c. `test_run.py` - CLI Entrypoint Tests
+
+Checks `run.main()` calls `uvicorn.run()` with the correct app import path and the port sourced from `get_settings()`.
+
+### 3d. `test_scripts_demo.py` - Demo Script Smoke Tests
+
+Validates that `scripts/demo.py` loads the demo module and calls `select_all()` for each supported model,
+printing expected headings for non-empty and empty results.
 
 ### 4. `test_claim.py` - Claim Model Tests
 
@@ -202,7 +234,37 @@ Contains reusable pytest fixtures available to all test files:
   - Required field validation
   - Serialisation/deserialisation
 
+### 6a. `routers/test_auth.py` - Role Guard Dependency Tests
+
+Mounts a minimal FastAPI app to verify that verifier and maintainer guards accept/reject based on the returned `UserRole`.
+
+### 6b. `routers/test_users.py` - Users Router Tests
+
+Validates `GET /users/me/role` resolves to `consumer` when no stored role exists,
+and returns the assigned role when present.
+
+### 6c. `routers/test_issues.py` - Issues Router Tests
+
+Covers issues creation (`POST /issues`) including `IssueCreate.type` literal handling and current UUID validation policy,
+plus list/update behavior protected by verifier permissions.
+
+### 6d. `routers/test_missions.py` - Missions Router Tests
+
+Tests mission attempt behavior, including UUID validation, answer normalization, and branching on grading logic.
+
+### 6e. `routers/test_*_schemas.py` - Schema Unit Tests
+
+Pure request/response schema validation for:
+- products/stages/claims/evidence (`test_products_schemas.py`)
+- issues (`test_issues_schemas.py`)
+- missions attempt input/output (`test_missions_schemas.py`)
+
 ### 7. `test_products.py` - Products Router Tests
+
+This suite covers the full products API surface exercised in the codebase:
+endpoint UUID validation, traceability, missions listing, evidence drill-down,
+stage/claim/evidence creation, claim verification (`verify`/`unverify`) and confidence updates,
+and verification history branching.
 
 **Test Classes:**
 
