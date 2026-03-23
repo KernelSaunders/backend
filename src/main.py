@@ -5,7 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .database import get_client
-from .routers import missions_router, products_router, users_router, issues_router
+from .routers import (
+    missions_router,
+    products_router,
+    users_router,
+    issues_router,
+    maintainers_router,
+)
 
 settings = get_settings()
 
@@ -30,3 +36,4 @@ app.include_router(products_router)
 app.include_router(missions_router)
 app.include_router(users_router)
 app.include_router(issues_router)
+app.include_router(maintainers_router)
