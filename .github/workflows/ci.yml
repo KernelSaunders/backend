@@ -5,235 +5,69 @@ on:
   pull_request:
 
 jobs:
-  test-config:
-    name: Test Config
+  # One matrix job expands to many parallel runs; each has a clear name in the Actions UI.
+  tests:
+    name: "${{ matrix.group_label }}"
     runs-on: ubuntu-latest
-    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group_label: "Unit · Config"
+            pytest_target: tests/test_config.py
+          - group_label: "Unit · Database layer"
+            pytest_target: tests/test_database.py
+          - group_label: "Unit · Authentication"
+            pytest_target: tests/test_auth.py
+          - group_label: "Unit · Shared fixtures (conftest)"
+            pytest_target: tests/test_conftest.py
+          - group_label: "App · FastAPI wiring (main)"
+            pytest_target: tests/test_main_app.py
+          - group_label: "CLI · run.py entrypoint"
+            pytest_target: tests/test_run.py
+          - group_label: "Scripts · demo"
+            pytest_target: tests/test_scripts_demo.py
+          - group_label: "Models · Product, stage & input share"
+            pytest_target: tests/models/test_product.py
+          - group_label: "Models · Claim & evidence"
+            pytest_target: tests/models/test_claim.py
+          - group_label: "Models · Issue reports & changelog"
+            pytest_target: tests/models/test_issue.py
+          - group_label: "Models · User, role, progress & quest mission"
+            pytest_target: tests/models/test_user.py
+          - group_label: "API · Products router"
+            pytest_target: tests/routers/test_products.py
+          - group_label: "Schemas · Products router (Pydantic)"
+            pytest_target: tests/routers/test_products_schemas.py
+          - group_label: "API · Missions router"
+            pytest_target: tests/routers/test_missions.py
+          - group_label: "Schemas · Missions router (Pydantic)"
+            pytest_target: tests/routers/test_missions_schemas.py
+          - group_label: "API · Users router"
+            pytest_target: tests/routers/test_users.py
+          - group_label: "API · Issues router"
+            pytest_target: tests/routers/test_issues.py
+          - group_label: "Schemas · Issues router (Pydantic)"
+            pytest_target: tests/routers/test_issues_schemas.py
+
     env:
       CI: true
       SUPABASE_URL: https://test.supabase.co
       SUPABASE_KEY: test-key-for-ci
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-    
-    - name: Run config tests
-      run: |
-        pytest tests/test_config.py -v
 
-  test-database:
-    name: Test Database
-    runs-on: ubuntu-latest
-    
-    env:
-      CI: true
-      SUPABASE_URL: https://test.supabase.co
-      SUPABASE_KEY: test-key-for-ci
-    
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-    
-    - name: Run database tests
-      run: |
-        pytest tests/test_database.py -v
+      - uses: actions/checkout@v4
 
-  test-conftest:
-    name: Test Conftest
-    runs-on: ubuntu-latest
-    
-    env:
-      CI: true
-      SUPABASE_URL: https://test.supabase.co
-      SUPABASE_KEY: test-key-for-ci
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-    
-    - name: Run conftest tests
-      run: |
-        pytest tests/test_conftest.py -v
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.10"
 
-  test-models:
-    name: Test Models
-    runs-on: ubuntu-latest
-    
-    env:
-      CI: true
-      SUPABASE_URL: https://test.supabase.co
-      SUPABASE_KEY: test-key-for-ci
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-    
-    - name: Run model tests with coverage
-      run: |
-        pytest tests/models/ -v --cov=src.models --cov-report=term-missing
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-  test-routers:
-    name: Test Routers
-    runs-on: ubuntu-latest
-    
-    env:
-      CI: true
-      SUPABASE_URL: https://test.supabase.co
-      SUPABASE_KEY: test-key-for-ci
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-    
-    - name: Run router tests
-      run: |
-        pytest tests/routers/ -v
-
-  coverage:
-    name: Coverage Report
-    runs-on: ubuntu-latest
-    
-    env:
-      CI: true
-      SUPABASE_URL: https://test.supabase.co
-      SUPABASE_KEY: test-key-for-ci
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-    
-    - name: Run all tests with coverage
-      run: |
-        pytest --cov=src --cov-report=xml --cov-report=term-missing
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: false
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-    
-    - name: Run flake8
-      run: |
-        flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 src/ --count --max-complexity=10 --max-line-length=127 --statistics
-
-  format-check:
-    name: Format Check
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-    
-    - name: Check black formatting
-      run: |
-        black --check src/ tests/
-
-  type-check:
-    name: Type Check
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.10'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-    
-    - name: Run mypy
-      run: |
-        mypy src/ --ignore-missing-imports
+      - name: "Run ${{ matrix.group_label }}"
+        run: pytest "${{ matrix.pytest_target }}" -v

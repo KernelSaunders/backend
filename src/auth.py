@@ -42,8 +42,8 @@ async def get_current_user_role(
     """
     Gets the user_role, depends on previous function to get user_id
     """
-    roles = select_by_field(UserRole, "user_id", user_id)
-    if roles:
+    roles=select_by_field(UserRole, "user_id", user_id)
+    if roles is not None and len(roles) > 0:
         return roles[0]
     return None
 

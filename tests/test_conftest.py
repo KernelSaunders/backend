@@ -1,10 +1,11 @@
 """Tests for conftest fixtures."""
 
-import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch
 import os
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 from dotenv import load_dotenv
+from fastapi.testclient import TestClient
 
 from src.config import Settings, get_settings
 
@@ -19,6 +20,25 @@ def test_client_fixture(client):
     """Test that client fixture returns a TestClient instance."""
     assert isinstance(client, TestClient)
     assert client.app is not None
+
+
+@patch("src.routers.products.get_client")
+def test_verifier_client_fixture_allows_verifier_only_route(mock_get_client, verifier_client):
+    """verifier_client sets auth overrides so verifier-gated routes can run (with DB mocked)."""
+    mock_response = MagicMock()
+    mock_response.data = []
+    mock_get_client.return_value.table.return_value.select.return_value.is_.return_value.execute.return_value = (
+        mock_response
+    )
+    r = verifier_client.get("/products/claims/pending")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_client_fixture_no_auth_on_verifier_route_returns_error(client):
+    """Plain client has no Bearer token; verifier route rejects before business logic."""
+    r = client.get("/products/claims/pending")
+    assert r.status_code in (401, 422)
 
 
 @pytest.mark.skipif(IS_CI, reason="Requires real Supabase credentials (CI uses mocks)")
