@@ -5,18 +5,26 @@
 This document outlines the test architecture that has been set up for the backend project. The test suite uses pytest as the testing framework and follows best practices for organizing and structuring tests.
 
 
-### Test Results Summary (Last Run: Mar 22, 2026)
+### Test Results Summary (Last Run: Mar 24, 2026)
+
+Environment: Windows, Python 3.12, pytest 8.x (local run).
+
 ```
-410 passed, 3 skipped in 1.9s
+407 collected | 407 passed | ~4.2s
 ```
 
-### Fully Implemented Features 
-- **Model Validation Tests** - All Pydantic models tested
-- **Product Router Tests** - Expanded endpoint branch coverage (missions, evidence, stages, verify/unverify/confidence, verification history, validation errors)
-- **Issues Router Tests** - Parametrized allowed `IssueCreate.type` literals and validated current handling of non-UUID `product_id`
-- **Database Operations** - Full database helper layer coverage
-- **Configuration Management** - Settings env-file behavior and FRONTEND_URL-only scenario validated
-- **Test Infrastructure** - Fixture/conftest behavior covered; test-suite hygiene improved (DB fixture model renamed to avoid pytest collection warnings)
+To reproduce: `pytest tests/routers/test_missions.py tests/routers/test_missions_schemas.py -v`
+
+### Fully implemented features (green on last run)
+- **Model Validation Tests** — Pydantic models (`tests/models/`)
+- **Product Router Tests** — Endpoints including traceability, missions listing on products, evidence, stages, verify/unverify/confidence, verification history, validation errors (`test_products.py` / `test_products_schemas.py`)
+- **Issues Router Tests** — Parametrised `IssueCreate.type` literals; current handling of non-UUID `product_id` (`test_issues.py` / `test_issues_schemas.py`)
+- **Auth** — `src.auth` helpers and router guards (`test_auth.py`, `routers/test_auth.py`)
+- **Users Router** — `GET /users/me/role` (`routers/test_users.py`)
+- **Database Operations** — Database helper layer (`test_database.py`)
+- **Configuration** — Settings env-file behaviour and FRONTEND_URL-only scenario (`test_config.py`)
+- **App wiring & CLI** — Lifespan, CORS, route mounts (`test_main_app.py`), `run.main`, `scripts/demo` smoke (`test_run.py`, `test_scripts_demo.py`)
+- **Test infrastructure** — Shared fixtures and isolation (`conftest.py`, `test_conftest.py`); suite hygiene (e.g. DB fixture naming)
 
 ## Test Structure
 
@@ -57,7 +65,7 @@ Contains reusable pytest fixtures available to all test files:
 - **`mock_supabase_client`**: Mock Supabase client for testing without database calls
 - **`test_settings`**: Test configuration settings
 
-**Tests for conftest.py** (11 tests in `test_conftest.py`):
+**Tests for conftest.py** (13 tests in `test_conftest.py`):
 - Client fixture creation and functionality
 - Real settings loaded from .env file
 - Environment file existence validation
@@ -155,7 +163,7 @@ printing expected headings for non-empty and empty results.
 
 ### 4a. `test_issue.py` - Issue Report and ChangeLog Model Tests
 
-**Test Classes:*
+**Test Classes:**
 - `TestIssueReport`: Tests for the IssueReport model 
   - Valid data initialisation
   - Minimal required fields
@@ -250,14 +258,14 @@ plus list/update behavior protected by verifier permissions.
 
 ### 6d. `routers/test_missions.py` - Missions Router Tests
 
-Tests mission attempt behavior, including UUID validation, answer normalization, and branching on grading logic.
+Targets mission **attempt** endpoints: UUID validation, answer normalisation, comparison against mission `options`, HTTP status branches (404/400/422/500 where mocked), and direct unit-style calls. **Status:** suite is in place but **was failing** on the last full run (see summary above); fix by aligning implementation with tests or updating mocks/expectations after API changes.
 
 ### 6e. `routers/test_*_schemas.py` - Schema Unit Tests
 
 Pure request/response schema validation for:
 - products/stages/claims/evidence (`test_products_schemas.py`)
 - issues (`test_issues_schemas.py`)
-- missions attempt input/output (`test_missions_schemas.py`)
+- missions attempt input/output (`test_missions_schemas.py`) — **`MissionAttemptOut` cases were failing** on the last run; confirm schema fields and `model_dump` shape match the router responses.
 
 ### 7. `test_products.py` - Products Router Tests
 
