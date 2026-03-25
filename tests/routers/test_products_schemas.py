@@ -104,6 +104,12 @@ class TestStageCreate:
             StageCreate()  # type: ignore[call-arg]
         assert any(e["loc"] == ("stage_type",) for e in exc.value.errors())
 
+    def test_empty_string_stage_type_passes_schema_validation(self):
+        """Pydantic accepts '' for stage_type — there is no min_length constraint.
+        The router would insert an empty string to the DB unchecked."""
+        body = StageCreate(stage_type="")
+        assert body.stage_type == ""
+
 
 class TestStageUpdate:
     def test_empty(self):
@@ -146,6 +152,20 @@ class TestClaimCreate:
             ClaimCreate(claim_type="t")  # type: ignore[call-arg]
         assert any(e["loc"] == ("claim_text",) for e in exc.value.errors())
 
+    def test_schema_permits_verified_label_but_router_rejects_it_on_create(self):
+        """The schema Literal allows 'verified' and 'partially_verified', but the
+        router's create_claim handler rejects any confidence_label other than
+        'unverified' with HTTP 400. The schema is therefore misleading — it
+        advertises options that are unconditionally blocked at the API layer."""
+        body = ClaimCreate(
+            claim_type="origin",
+            claim_text="Made in EU",
+            confidence_label="verified",
+        )
+        assert body.confidence_label == "verified"
+        # This object would be rejected by POST /products/{id}/claims with:
+        # 400 "New claims must be marked 'unverified' — add evidence first, then verify."
+
 
 class TestEvidenceCreate:
     def test_minimal(self):
@@ -174,3 +194,12 @@ class TestEvidenceCreate:
         with pytest.raises(ValidationError) as exc:
             EvidenceCreate(issuer="x")  # type: ignore[call-arg]
         assert any(e["loc"] == ("type",) for e in exc.value.errors())
+
+    def test_schema_has_no_claim_id_field_and_stage_id_none_is_valid(self):
+        """EvidenceCreate carries no claim_id field — the router always injects
+        it from the URL path (/{product_id}/claims/{claim_id}/evidence).
+        stage_id is an optional cross-reference to a supply-chain stage; None
+        is the common valid state when evidence is claim-only."""
+        body = EvidenceCreate(type="certificate", issuer="Lab A", stage_id=None)
+        assert body.stage_id is None
+        assert "claim_id" not in EvidenceCreate.model_fields
