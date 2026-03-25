@@ -1,9 +1,10 @@
+import os
 import uuid
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from ..auth import get_current_user_id, get_current_user_role, require_verifier
@@ -86,6 +87,18 @@ class ProductTraceability(BaseModel):
     claims: list[Claim]
 
 
+class StageEvidenceGroup(BaseModel):
+    stage_id: str
+    stage_type: str
+    description: str | None = None
+    evidence: list[Evidence]
+
+
+class ProductStageEvidenceView(BaseModel):
+    product_id: str
+    groups: list[StageEvidenceGroup]
+
+
 class ClaimEvidenceGroup(BaseModel):
     claim_id: str
     claim_type: str
@@ -118,6 +131,35 @@ def validate_uuid(value: str, field_name: str = "id") -> str:
         return value
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid {field_name} format")
+
+
+def normalize_filename(filename: str | None) -> str:
+    cleaned = os.path.basename(filename or "evidence")
+    cleaned = cleaned.replace(" ", "_")
+    return cleaned or "evidence"
+
+
+def validate_evidence_target(
+    product_id: str, claim_id: str | None, stage_id: str | None
+):
+    if bool(claim_id) == bool(stage_id):
+        raise HTTPException(
+            status_code=400,
+            detail="Provide exactly one of claim_id or stage_id",
+        )
+
+    if claim_id:
+        validate_uuid(claim_id, "claim_id")
+        claim = select_by_id(Claim, "claim_id", claim_id)
+        if not claim or claim.product_id != product_id:
+            raise HTTPException(status_code=404, detail="Claim not found")
+        return {"claim": claim, "stage": None}
+
+    validate_uuid(stage_id or "", "stage_id")
+    stage = select_by_id(Stage, "stage_id", stage_id or "")
+    if not stage or stage.product_id != product_id:
+        raise HTTPException(status_code=404, detail="Stage not found")
+    return {"claim": None, "stage": stage}
 
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -344,6 +386,97 @@ async def create_evidence(
     return row
 
 
+@router.post("/{product_id}/evidence/upload", status_code=201)
+async def upload_evidence(
+    product_id: str,
+    file: UploadFile = File(...),
+    type: str = Form(...),
+    issuer: str = Form(...),
+    date: str | None = Form(None),
+    summary: str | None = Form(None),
+    claim_id: str | None = Form(None),
+    stage_id: str | None = Form(None),
+    user_id: str = Depends(get_current_user_id),
+    _verifier: UserRole = Depends(require_verifier),
+):
+    """Upload evidence for either a claim or a stage. Requires verifier role."""
+    validate_uuid(product_id, "product_id")
+    product = select_by_id(Product, "product_id", product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # only accept pdf or txt
+    if file.content_type not in {"application/pdf", "text/plain"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF and text files are allowed",
+        )
+
+    target = validate_evidence_target(product_id, claim_id, stage_id)
+
+    # cap at 1MB (supabase free tier is 50mb storage)
+    contents = await file.read()
+    if len(contents) > 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size must be 1MB or less")
+
+    evidence_id = str(uuid.uuid4())
+    safe_name = normalize_filename(file.filename)
+
+    # link to either claim or stage
+    if target["claim"] is not None:
+        object_path = (
+            f"products/{product_id}/claims/{claim_id}/{evidence_id}-{safe_name}"
+        )
+    else:
+        object_path = (
+            f"products/{product_id}/stages/{stage_id}/{evidence_id}-{safe_name}"
+        )
+
+    client = get_client()
+    client.storage.from_("documents").upload(
+        object_path,
+        contents,
+        {"content-type": file.content_type},
+    )
+
+    record = {
+        "evidence_id": evidence_id,
+        "type": type,
+        "issuer": issuer,
+        "file_reference": object_path,
+        "created_at": datetime.now().isoformat(),
+    }
+    if date:
+        record["date"] = date
+    if summary:
+        record["summary"] = summary
+    if claim_id:
+        record["claim_id"] = claim_id
+    if stage_id:
+        record["stage_id"] = stage_id
+
+    row = insert_one("Evidence", record)
+    log_entity_change(
+        "evidence",
+        evidence_id,
+        user_id,
+        {
+            "action": "uploaded",
+            "product_id": product_id,
+            "claim_id": claim_id,
+            "stage_id": stage_id,
+            "file_reference": object_path,
+            "fields": {
+                "type": type,
+                "issuer": issuer,
+                "date": date,
+                "summary": summary,
+            },
+        },
+    )
+    return row
+
+
 @router.get("")
 def get_products() -> list[Product]:
     return select_all(Product)
@@ -412,15 +545,43 @@ def get_product_evidence(product_id: str) -> ProductEvidenceView:
     for claim in claims:
         evidence = select_by_field(Evidence, "claim_id", claim.claim_id)
         if evidence:
-            groups.append(ClaimEvidenceGroup(
-                claim_id=claim.claim_id,
-                claim_type=claim.claim_type,
-                claim_text=claim.claim_text,
-                confidence_label=claim.confidence_label,
-                evidence=evidence,
-            ))
+            groups.append(
+                ClaimEvidenceGroup(
+                    claim_id=claim.claim_id,
+                    claim_type=claim.claim_type,
+                    claim_text=claim.claim_text,
+                    confidence_label=claim.confidence_label,
+                    evidence=evidence,
+                )
+            )
 
     return ProductEvidenceView(product_id=product_id, groups=groups)
+
+
+@router.get("/{product_id}/stage-evidence")
+def get_product_stage_evidence(product_id: str) -> ProductStageEvidenceView:
+    """Returns evidence grouped by stage for timeline and dashboard views."""
+    validate_uuid(product_id, "product_id")
+    product = select_by_id(Product, "product_id", product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    stages = select_by_field(Stage, "product_id", product_id)
+    stages.sort(key=lambda s: s.sequence_order or 0)
+    groups: list[StageEvidenceGroup] = []
+    for stage in stages:
+        evidence = select_by_field(Evidence, "stage_id", stage.stage_id)
+        if evidence:
+            groups.append(
+                StageEvidenceGroup(
+                    stage_id=stage.stage_id,
+                    stage_type=stage.stage_type,
+                    description=stage.description,
+                    evidence=evidence,
+                )
+            )
+
+    return ProductStageEvidenceView(product_id=product_id, groups=groups)
 
 
 @router.get("/{product_id}/missions", response_model=list[QuestMissionPublic])
@@ -461,6 +622,7 @@ def get_product_missions(product_id: str) -> list[QuestMissionPublic]:
         )
     return public
 
+
 @router.get("/{product_id}/claims/{claim_id}/evidence")
 def get_claim_evidence(product_id: str, claim_id: str) -> ClaimEvidenceGroup:
     """
@@ -482,6 +644,7 @@ def get_claim_evidence(product_id: str, claim_id: str) -> ClaimEvidenceGroup:
         rationale=claim.rationale,
         evidence=evidence,
     )
+
 
 @router.put("/{product_id}/claims/{claim_id}/verify")
 async def verify_claim(
