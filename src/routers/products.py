@@ -1,11 +1,12 @@
 import os
 import uuid
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from ..auth import get_current_user_id, get_current_user_role, require_verifier
 from ..database import (
@@ -118,10 +119,32 @@ class QuestMissionPublic(BaseModel):
     product_id: str
     tier: Literal["basic", "intermediate", "advanced"]
     question: str
-    type: Literal["multiple_choice"] = "multiple_choice"
-    options: list[str]
+    type: Literal["multiple_choice", "numeric"] = "multiple_choice"
+    options: list[str] | None = None
     explanation_link: str | None = None
     created_at: datetime
+
+    @model_validator(mode="after")
+    def validate_shape(self):
+        if self.type == "multiple_choice":
+            if not isinstance(self.options, list) or not all(
+                isinstance(option, str) for option in self.options
+            ):
+                raise ValueError("multiple_choice missions require string options")
+        elif self.options is not None:
+            raise ValueError("numeric missions do not support options")
+        return self
+
+
+def _coerce_numeric_answer(value: object) -> Decimal | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float, str)):
+        try:
+            return Decimal(str(value).strip())
+        except (InvalidOperation, ValueError):
+            return None
+    return None
 
 
 def validate_uuid(value: str, field_name: str = "id") -> str:
@@ -596,17 +619,38 @@ def get_product_missions(product_id: str) -> list[QuestMissionPublic]:
     for m in missions:
         answer_key = m.answer_key or {}
         options = answer_key.get("options")
+        correct = answer_key.get("correct")
 
-        # Don't support manual answers for now
         if m.grading_type != "auto":
             continue
 
-        if not isinstance(options, list) or not all(
-            isinstance(o, str) for o in options
-        ):
+        if options is not None:
+            if not isinstance(options, list) or not all(
+                isinstance(o, str) for o in options
+            ):
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"QuestMission {m.mission_id} has invalid answer_key.options",
+                )
+
+            public.append(
+                QuestMissionPublic(
+                    mission_id=m.mission_id,
+                    product_id=m.product_id or product_id,
+                    tier=m.tier,
+                    question=m.question,
+                    type="multiple_choice",
+                    options=options,
+                    explanation_link=m.explanation_link,
+                    created_at=m.created_at,
+                )
+            )
+            continue
+
+        if _coerce_numeric_answer(correct) is None:
             raise HTTPException(
                 status_code=500,
-                detail=f"QuestMission {m.mission_id} has invalid answer_key.options",
+                detail=f"QuestMission {m.mission_id} has invalid answer_key.correct",
             )
 
         public.append(
@@ -615,7 +659,7 @@ def get_product_missions(product_id: str) -> list[QuestMissionPublic]:
                 product_id=m.product_id or product_id,
                 tier=m.tier,
                 question=m.question,
-                options=options,
+                type="numeric",
                 explanation_link=m.explanation_link,
                 created_at=m.created_at,
             )

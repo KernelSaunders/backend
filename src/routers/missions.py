@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from ..auth import get_current_user_id
 from ..database import get_client, select_by_field, select_by_id
@@ -23,7 +24,22 @@ router = APIRouter(prefix="/missions", tags=["missions"])
 
 # request body
 class MissionAttemptIn(BaseModel):
-    option_index: int
+    option_index: int | None = None
+    numeric_answer: Decimal | None = None
+
+    @model_validator(mode="after")
+    def validate_attempt_shape(self):
+        provided = [
+            self.option_index is not None,
+            self.numeric_answer is not None,
+        ]
+        if sum(provided) != 1:
+            raise ValueError("Provide exactly one of option_index or numeric_answer")
+        return self
+
+    def model_dump(self, *args, **kwargs):
+        kwargs.setdefault("exclude_none", True)
+        return super().model_dump(*args, **kwargs)
 
 
 # return body
@@ -110,6 +126,17 @@ def _norm_answer(value: str) -> str:
     return value.strip().casefold()
 
 
+def _coerce_numeric_answer(value: object) -> Decimal | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float, str, Decimal)):
+        try:
+            return Decimal(str(value).strip())
+        except (InvalidOperation, ValueError):
+            return None
+    return None
+
+
 @router.post("/{mission_id}/attempts", response_model=MissionAttemptOut)
 def create_attempt(
     mission_id: str,
@@ -128,22 +155,42 @@ def create_attempt(
     options = answer_key.get("options")
     correct = answer_key.get("correct")
 
-    # validate the mission first (options are correct, answer is an option)
-    if not isinstance(options, list) or not all(isinstance(o, str) for o in options):
-        raise HTTPException(
-            status_code=500, detail="Mission is not attemptable (invalid options)"
-        )
-    if not isinstance(correct, str):
-        raise HTTPException(
-            status_code=500,
-            detail="Mission is not attemptable (invalid correct answer)",
-        )
+    if options is not None:
+        if not isinstance(options, list) or not all(
+            isinstance(o, str) for o in options
+        ):
+            raise HTTPException(
+                status_code=500, detail="Mission is not attemptable (invalid options)"
+            )
+        if not isinstance(correct, str):
+            raise HTTPException(
+                status_code=500,
+                detail="Mission is not attemptable (invalid correct answer)",
+            )
+        if attempt.option_index is None:
+            raise HTTPException(
+                status_code=422,
+                detail="option_index required for multiple_choice mission",
+            )
+        if attempt.option_index < 0 or attempt.option_index >= len(options):
+            raise HTTPException(status_code=422, detail="option_index out of range")
 
-    if attempt.option_index < 0 or attempt.option_index >= len(options):
-        raise HTTPException(status_code=422, detail="option_index out of range")
+        chosen = options[attempt.option_index]
+        is_correct = _norm_answer(chosen) == _norm_answer(correct)
+    else:
+        expected = _coerce_numeric_answer(correct)
+        if expected is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Mission is not attemptable (invalid correct answer)",
+            )
+        if attempt.numeric_answer is None:
+            raise HTTPException(
+                status_code=422,
+                detail="numeric_answer required for numeric mission",
+            )
 
-    chosen = options[attempt.option_index]
-    is_correct = _norm_answer(chosen) == _norm_answer(correct)
+        is_correct = attempt.numeric_answer == expected
 
     progress, points_awarded = upsert_user_progress(user_id, mission, is_correct)
     completed = progress.completed
