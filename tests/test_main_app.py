@@ -55,8 +55,33 @@ class TestFastAPIFactory:
         assert isinstance(app, FastAPI)
 
     def test_lifespan_bound_to_same_callable(self):
-        """The router should use the module-level asynccontextmanager lifespan."""
-        assert app.router.lifespan_context is lifespan
+        """The router lifespan context wraps the module-level lifespan.
+
+        FastAPI internally merges the provided lifespan via
+        _merge_lifespan_context (potentially multiple times), so the stored
+        callable is a nested wrapper.  We recursively search all closure cells
+        to confirm our lifespan is reachable.
+        """
+        def _in_closures(fn, target, _seen=None):
+            if _seen is None:
+                _seen = set()
+            if id(fn) in _seen:
+                return False
+            _seen.add(id(fn))
+            for cell in getattr(fn, "__closure__", None) or []:
+                try:
+                    val = cell.cell_contents
+                except ValueError:
+                    continue
+                if val is target:
+                    return True
+                if callable(val) and _in_closures(val, target, _seen):
+                    return True
+            return False
+
+        ctx = app.router.lifespan_context
+        assert callable(ctx)
+        assert _in_closures(ctx, lifespan)
 
     def test_routers_mounted(self):
         route_paths = []
