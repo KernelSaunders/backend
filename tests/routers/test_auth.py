@@ -55,3 +55,44 @@ class TestRoleGuards:
         response = self.client.get("/maintainer-only")
 
         assert response.status_code == 200
+
+    def test_maintainer_route_rejects_verifier(self):
+        async def override_user_role():
+            return UserRole(
+                role_id="660e8400-e29b-41d4-a716-446655440000",
+                user_id="550e8400-e29b-41d4-a716-446655440000",
+                role="verifier",
+                created_at=datetime.now(),
+            )
+
+        self.app.dependency_overrides[get_current_user_role] = override_user_role
+
+        response = self.client.get("/maintainer-only")
+
+        assert response.status_code == 403
+        assert response.json()["detail"] == "Access forbidden: maintainer role required"
+
+    def test_maintainer_route_rejects_consumer(self):
+        async def override_user_role():
+            return UserRole(
+                role_id="660e8400-e29b-41d4-a716-446655440000",
+                user_id="550e8400-e29b-41d4-a716-446655440000",
+                role="consumer",
+                created_at=datetime.now(),
+            )
+
+        self.app.dependency_overrides[get_current_user_role] = override_user_role
+
+        response = self.client.get("/maintainer-only")
+
+        assert response.status_code == 403
+
+    def test_maintainer_route_rejects_no_role(self):
+        async def override_user_role():
+            return None
+
+        self.app.dependency_overrides[get_current_user_role] = override_user_role
+
+        response = self.client.get("/maintainer-only")
+
+        assert response.status_code == 403

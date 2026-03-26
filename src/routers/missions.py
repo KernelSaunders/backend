@@ -28,10 +28,16 @@ class MissionAttemptIn(BaseModel):
 
 # return body
 class MissionAttemptOut(BaseModel):
+    model_config = {"populate_by_name": True}
+
     correct: bool
-    points_awarded: int
-    completed: bool
+    points_awarded: int | None = None
+    completed: bool | None = None
     attempts: int | None = None
+
+    def model_dump(self, **kwargs):
+        kwargs.setdefault("exclude_none", True)
+        return super().model_dump(**kwargs)
 
 
 def mission_points(tier: str) -> int:
@@ -110,7 +116,7 @@ def _norm_answer(value: str) -> str:
     return value.strip().casefold()
 
 
-@router.post("/{mission_id}/attempts", response_model=MissionAttemptOut)
+@router.post("/{mission_id}/attempts", response_model=MissionAttemptOut, response_model_exclude_none=True)
 def create_attempt(
     mission_id: str,
     attempt: MissionAttemptIn,
